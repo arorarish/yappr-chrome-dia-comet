@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yappr Analytics - Speech Trends Dashboard</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <script src="chart.min.js"></script>
+    <style>
+        /* Analytics page specific styles */
+        body {
+            padding: var(--spacing-xl);
+        }
+        
+        .yappr-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Logo header */
+        .logo-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .page-logo {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+        
+        .analytics-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .analytics-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: var(--chart-height-lg);
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+        }
+        
+        .chart-title {
+            font-size: var(--font-size-lg);
+            font-weight: bold;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .chart-canvas {
+            position: relative;
+            height: var(--chart-height-md);
+        }
+
+        .chart-info {
+            margin-top: var(--spacing-sm);
+            padding-top: var(--spacing-sm);
+            border-top: 1px solid var(--color-outline);
+        }
+
+        .ideal-range-info {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+        }
+
+        .ideal-range-info .material-icons {
+            font-size: 16px;
+            color: var(--color-info);
+        }
+
+        /* Analysis Container Styles */
+        .analysis-container .chart-canvas {
+            height: auto;
+            min-height: var(--chart-height-md);
+        }
+
+        .analysis-content {
+            padding: var(--spacing-md);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analysis-placeholder {
+            text-align: center;
+            padding: var(--spacing-xl) var(--spacing-md);
+            color: var(--color-text-secondary);
+        }
+
+        .analysis-placeholder .material-icons {
+            font-size: 3rem;
+            margin-bottom: var(--spacing-md);
+            opacity: 0.5;
+            color: var(--color-text-secondary);
+        }
+
+        .analysis-placeholder p {
+            margin-bottom: var(--spacing-lg);
+            font-size: var(--font-size-sm);
+        }
+
+        .analysis-results {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .analysis-text {
+            flex: 1;
+            padding: var(--spacing-md);
+            background-color: rgba(0,0,0,0.2);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-outline);
+            font-size: var(--font-size-sm);
+            line-height: 1.6;
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-md);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .analysis-actions {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing-sm);
+        }
+
+        .analysis-loading {
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--color-text-secondary);
+        }
+
+        .analysis-loading .material-icons.spinner {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-md);
+            animation: spin 1s linear infinite;
+            color: var(--color-accent);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-small {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            gap: var(--spacing-xs);
+        }
+
+        .btn-small .material-icons {
+            font-size: 16px;
+        }
+        
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(var(--grid-min-200), 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .overview-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            text-align: center;
+            transition: all var(--transition-normal);
+        }
+        
+        .overview-card:hover {
+            transform: translateY(-2px);
+            background-color: rgba(32,32,58,0.8);
+        }
+
+
+
+        /* Speech Analysis Section */
+        .speech-analysis-section {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: blur(var(--size-md));
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Toggle Switch Styles */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .toggle {
+            position: relative !important;
+            width: 44px !important;
+            height: 24px !important;
+            background: rgba(100, 100, 120, 0.3) !important;
+            border: 1px solid var(--color-outline) !important;
+            border-radius: 12px !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            display: inline-block !important;
+            outline: none !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+        }
+        
+        .toggle.active {
+            background: var(--accent) !important;
+            border-color: var(--accent) !important;
+        }
+        
+        .toggle-slider {
+            position: absolute !important;
+            top: 2px !important;
+            left: 2px !important;
+            width: 18px !important;
+            height: 18px !important;
+            background: var(--color-white) !important;
+            border-radius: 50% !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+            pointer-events: none !important;
+        }
+        
+        .toggle.active .toggle-slider {
+            transform: translateX(20px) !important;
+        }
+        
+        .toggle:focus {
+            outline: none !important;
+            box-shadow: 0 0 0 2px var(--color-accent-light) !important;
+        }
+
+        .analysis-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-lg);
+            gap: var(--spacing-lg);
+        }
+
+        .analysis-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .toggle-label {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .analysis-actions {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+        }
+
+        .analysis-status {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .analysis-results {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--border-radius-md);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+        }
+
+        .results-title {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .results-content {
+            color: var(--text-secondary);
+        }
+        
+        .overview-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--color-success);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .overview-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .overview-change {
+            font-size: var(--font-size-xs);
+            margin-top: var(--spacing-xs);
+        }
+        
+        .overview-change.positive {
+            color: var(--color-success);
+        }
+        
+        .overview-change.negative {
+            color: var(--color-error);
+        }
+        
+        .date-range-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: nowrap;
+        }
+        
+        .date-range-left {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex: 1;
+        }
+        
+        .date-range-right {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-shrink: 0;
+        }
+        
+        /* Date range buttons now use segmented-control class */
+        
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: var(--text-secondary);
+        }
+        
+        .loading-state .material-icons {
+            font-size: 48px;
+            margin-bottom: var(--spacing-md);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Onboarding State Styles */
+        .onboarding-state {
+            text-align: center;
+            padding: var(--spacing-xl);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .onboarding-header h2 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: 2rem;
+        }
+
+        .onboarding-header p {
+            color: var(--text-secondary);
+            font-size: var(--font-size-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .preview-section {
+            margin: var(--spacing-2xl) 0;
+            text-align: left;
+        }
+
+        .preview-section h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            text-align: center;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .preview-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: blur(var(--size-md));
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .preview-card:hover {
+            transform: translateY(-2px);
+            background-color: rgba(32,32,58,0.8);
+        }
+
+        .preview-chart {
+            margin-bottom: var(--spacing-md);
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-label {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+        }
+
+        .getting-started {
+            margin: var(--spacing-2xl) 0;
+        }
+
+        .getting-started h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .step-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: blur(var(--size-md));
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            border: 1px solid var(--border-color);
+            text-align: left;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            background-color: rgba(32,32,58,0.8);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: var(--spacing-lg);
+            background: var(--primary-gradient);
+            color: var(--color-white);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: var(--font-size-sm);
+        }
+
+        .step-content h4 {
+            color: var(--text-primary);
+            margin: var(--spacing-sm) 0;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-md);
+            line-height: 1.5;
+        }
+
+        .keyboard-shortcut {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-sm);
+        }
+
+        .shortcut-key {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-family: monospace;
+            font-size: var(--font-size-xs);
+            color: var(--text-primary);
+        }
+
+        .feature-preview {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--color-success);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--border-radius-md);
+            font-size: var(--font-size-xs);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            margin-top: var(--spacing-sm);
+        }
+
+        .unlock-progress {
+            margin: var(--spacing-2xl) 0;
+        }
+
+        .unlock-progress h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .progress-milestones {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-2xl);
+        }
+
+        .milestone {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: blur(var(--size-md));
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .milestone:hover {
+            transform: translateY(-2px);
+            background-color: rgba(32,32,58,0.8);
+        }
+
+        .milestone-icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .milestone-text {
+            color: var(--text-secondary);
+            font-size: var(--font-size-sm);
+            line-height: 1.4;
+        }
+
+        .milestone-text strong {
+            color: var(--text-primary);
+            display: block;
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .onboarding-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: var(--spacing-2xl);
+        }
+        
+        /* Advanced Insights Styles */
+        .advanced-insights {
+            margin-top: var(--spacing-4xl);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .insight-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: blur(var(--size-md));
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            margin-bottom: var(--spacing-lg);
+            border: 1px solid var(--glass-border);
+            transition: all var(--transition-normal);
+        }
+
+        .insight-card:hover {
+            background-color: rgba(32,32,58,0.8);
+            transform: translateY(-2px);
+        }
+
+        .insight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .insight-title {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            color: var(--text-primary);
+        }
+
+        .insight-score {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--status-success);
+        }
+
+        .insight-description {
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-lg);
+            line-height: 1.5;
+        }
+
+        .insight-content {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .overused-words, .repeated-phrases {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+        }
+
+        .word-tag, .phrase-tag {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--status-error-text);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-sm);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .phrase-tag {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fcd34d;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .no-data {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: var(--spacing-lg);
+        }
+
+        .insight-improve-btn {
+            background: var(--btn-primary-bg);
+            border: 1px solid var(--btn-primary-border);
+            color: var(--text-primary);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            font-size: var(--font-size-sm);
+        }
+
+        .insight-improve-btn:hover:not(:disabled) {
+            background: var(--btn-primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .insight-improve-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tooltip Styles */
+        .tooltip-trigger {
+            position: relative;
+            cursor: help;
+            opacity: 0.7;
+        }
+
+        .tooltip-trigger:hover {
+            opacity: 1;
+        }
+
+        .tooltip-trigger .material-icons {
+            font-size: 16px;
+        }
+
+        .tooltip-trigger:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: var(--color-white);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-xs);
+            white-space: nowrap;
+            max-width: 200px;
+            white-space: normal;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Usage Analytics Styles */
+        .usage-analytics-section {
+            margin-top: var(--spacing-xl);
+        }
+
+        .usage-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .usage-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+
+        .stats-container {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+        }
+
+        .usage-stats {
+            display: grid;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-base);
+        }
+
+        .usage-controls {
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: center;
+            margin-bottom: var(--spacing-lg);
+            flex-wrap: wrap;
+        }
+
+        .privacy-notice {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-top: var(--spacing-lg);
+        }
+
+        .notice-content {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-sm);
+        }
+
+        .notice-content .material-icons {
+            color: var(--color-success);
+            font-size: var(--size-lg);
+            margin-top: 2px;
+        }
+
+        .notice-text {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-sm);
+            line-height: 1.5;
+        }
+
+        .notice-text strong {
+            color: var(--color-text-primary);
+        }
+
+        .notice-text a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .notice-text a:hover {
+            color: var(--color-accent-secondary);
+            text-decoration: underline;
+        }
+
+        /* Suggestions Modal */
+        .suggestions-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            z-index: var(--z-modal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-xl);
+        }
+
+        .suggestions-modal-content {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            backdrop-filter: var(--glass-backdrop);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--glass-border);
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .suggestions-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--spacing-xl);
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .suggestions-modal-header h3 {
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .suggestions-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--spacing-xs);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+        }
+
+        .suggestions-close:hover {
+            background-color: rgba(32,32,58,0.8);
+            color: var(--text-primary);
+        }
+
+        .suggestions-modal-body {
+            flex: 1;
+            padding: var(--spacing-xl);
+            overflow-y: auto;
+        }
+
+        .suggestions-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--spacing-md);
+            color: var(--text-secondary);
+            padding: var(--spacing-xl);
+        }
+
+        .suggestions-loading .material-icons {
+            font-size: 48px;
+            animation: spin 2s linear infinite;
+        }
+
+        .suggestions-content {
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .suggestion-item {
+            margin-bottom: var(--spacing-md);
+            padding: var(--spacing-sm);
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--status-success);
+        }
+
+        .suggestion-pair {
+            margin-bottom: var(--spacing-sm);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+        }
+
+        .suggestions-modal-footer {
+            padding: var(--spacing-xl);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        @media (max-width: 768px) {
+            .analytics-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .date-range-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .suggestions-modal-content {
+                margin: var(--spacing-lg);
+                max-height: 90vh;
+            }
+
+            .insight-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="yappr-page">
+        <div class="yappr-container">
+            <!-- Logo Header -->
+            <div class="logo-header">
+                <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="page-logo" />
+            </div>
+            
+            
+            <!-- Navigation Menu -->
+            <nav class="nav-menu">
+                <a href="analytics.html" class="nav-item active">
+                    <span class="material-icons">assessment</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="history.html" class="nav-item">
+                    <span class="material-icons">history</span>
+                    <span class="nav-item-text">History</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="folders.html" class="nav-item">
+                    <span class="material-icons">folder</span>
+                    <span class="nav-item-text">Folders</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="settings.html" class="nav-item">
+                    <span class="material-icons">settings</span>
+                    <span class="nav-item-text">Settings</span>
+                </a>
+            </nav>
+            
+
+            <!-- Date Range Selector -->
+            <div class="date-range-selector">
+                <div class="date-range-left">
+                    <span style="color: var(--text-secondary); font-weight: 500;">Time Range:</span>
+                    <div class="segmented-control">
+                        <button class="active" data-range="7">Last 7 Days</button>
+                        <button data-range="30">Last 30 Days</button>
+                        <button data-range="90">Last 90 Days</button>
+                        <button data-range="all">All Time</button>
+                    </div>
+                </div>
+                <div class="date-range-right">
+                    <button class="btn-secondary" id="shareProgress">
+                        <span class="material-icons" style="font-size: 16px;">share</span>
+                        Share Progress
+                    </button>
+                    <button class="btn-secondary" id="refreshBtn">
+                        <span class="material-icons" style="font-size: 16px;">refresh</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Overview Stats -->
+            <div class="stats-overview" id="overviewStats">
+                <div class="overview-card" title="Average words spoken per minute across all sessions. Optimal range is 140-180 WPM for clear, professional communication.">
+                    <div class="overview-number" id="avgWPM">-</div>
+                    <div class="overview-label">Average WPM</div>
+                    <div class="overview-change" id="wpmChange"></div>
+                </div>
+                <div class="overview-card" title="Total words spoken across all recording sessions. Tracks your overall speech practice volume and engagement.">
+                    <div class="overview-number" id="totalWords">-</div>
+                    <div class="overview-label">Total Words</div>
+                    <div class="overview-change" id="wordsChange"></div>
+                </div>
+                <div class="overview-card" title="Average filler words (um, uh, like) per minute. Lower numbers indicate more polished, confident speech delivery.">
+                    <div class="overview-number" id="avgFillers">-</div>
+                    <div class="overview-label">Avg Fillers/Min</div>
+                    <div class="overview-change" id="fillersChange"></div>
+                </div>
+            </div>
+
+
+            <!-- New Analytics Layout - 4 Sections -->
+            <div class="analytics-grid">
+                <!-- Row 1: WPM Trends & Filler Words Bar Chart -->
+                <div class="analytics-row">
+                    <div class="chart-container" title="Your speaking pace over time with ideal range (140-160 WPM for casual speech). Stay in the green zone for optimal clarity.">
+                        <div class="chart-title">
+                            <span class="material-icons">speed</span>
+                            Speed of Talking (WPM)
+                        </div>
+                        <div class="chart-canvas">
+                            <canvas id="wpmTrendsChart"></canvas>
+                        </div>
+                        <div class="chart-info">
+                            <span class="ideal-range-info">
+                                <span class="material-icons">info</span>
+                                Ideal range: 140-160 WPM for casual speech
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="chart-container" title="Most frequently used filler words. Focus on reducing these to improve speech clarity.">
+                        <div class="chart-title">
+                            <span class="material-icons">bar_chart</span>
+                            Most Common Filler Words
+                        </div>
+                        <div class="chart-canvas">
+                            <canvas id="fillerBarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Filler Trends & AI Analysis -->
+                <div class="analytics-row">
+                    <div class="chart-container" title="Filler word frequency over time. Track your improvement as this line goes down.">
+                        <div class="chart-title">
+                            <span class="material-icons">trending_down</span>
+                            Filler Words Trends
+                        </div>
+                        <div class="chart-canvas">
+                            <canvas id="fillerTrendsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-container analysis-container" title="AI-powered analysis of your last 7 days of speech patterns with personalized improvement suggestions.">
+                        <div class="chart-title">
+                            <span class="material-icons">psychology</span>
+                            7-Day AI Speech Analysis
+                        </div>
+                        <div class="analysis-content">
+                            <div class="analysis-status" id="analysisStatus">
+                                <div class="analysis-placeholder" id="analysisPlaceholder">
+                                    <span class="material-icons">analytics</span>
+                                    <p>Complete 7 days of transcriptions to unlock AI analysis</p>
+                                    <div class="form-description" style="font-size: var(--font-size-xs); color: var(--text-muted); text-align: center; margin-top: var(--spacing-sm);">
+                                        <span class="material-icons" style="font-size: 14px; vertical-align: text-bottom;">info</span>
+                                        Analysis uses OpenAI GPT-4o-mini API (~$0.0001-0.0003 per use)
+                                    </div>
+                                    <button class="btn-primary btn-small" id="runAnalysisBtn" disabled>
+                                        <span class="material-icons">psychology</span>
+                                        Analyze Speech Patterns
+                                    </button>
+                                </div>
+                                <div class="analysis-results" id="analysisResults" style="display: none;">
+                                    <div class="analysis-text" id="analysisText"></div>
+                                    <div class="analysis-actions">
+                                        <button class="btn-secondary btn-small" id="refreshAnalysisBtn">
+                                            <span class="material-icons">refresh</span>
+                                            Refresh Analysis
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="analysis-loading" id="analysisLoading" style="display: none;">
+                                    <span class="material-icons spinner">psychology</span>
+                                    <p>Analyzing speech patterns...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Insights Section -->
+            <div class="advanced-insights" id="advancedInsights" style="display: none;">
+                <h2 style="color: var(--text-primary); margin-bottom: var(--spacing-xl); display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <span class="material-icons">psychology</span>
+                    Advanced Speech Insights
+                </h2>
+
+                <!-- Vocabulary Diversity Score -->
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <div class="insight-title">
+                            <span class="material-icons">auto_awesome</span>
+                            Vocabulary Diversity
+                            <span class="tooltip-trigger" data-tooltip="Measures how varied and rich your vocabulary is. Higher scores indicate more diverse word usage.">
+                                <span class="material-icons">help_outline</span>
+                            </span>
+                        </div>
+                        <div class="insight-score" id="diversityScore">-</div>
+                    </div>
+                    <div class="insight-description" id="diversityDescription">
+                        Analysis your vocabulary richness across recent sessions
+                    </div>
+                    <button class="insight-improve-btn" id="improveDiversity" disabled>
+                        <span class="material-icons">lightbulb</span>
+                        Get Suggestions
+                    </button>
+                </div>
+
+                <!-- Most Overused Words -->
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <div class="insight-title">
+                            <span class="material-icons">repeat</span>
+                            Most Overused Words
+                            <span class="tooltip-trigger" data-tooltip="Words you use more frequently than typical. Reducing these can make your speech more engaging.">
+                                <span class="material-icons">help_outline</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="insight-content">
+                        <div class="overused-words" id="overusedWords">
+                            <div class="no-data">Complete deep analysis to see insights</div>
+                        </div>
+                    </div>
+                    <button class="insight-improve-btn" id="improveOverused" disabled>
+                        <span class="material-icons">lightbulb</span>
+                        Get Alternatives
+                    </button>
+                </div>
+
+                <!-- Top Repeated Phrases -->
+                <div class="insight-card">
+                    <div class="insight-header">
+                        <div class="insight-title">
+                            <span class="material-icons">format_quote</span>
+                            Repeated Phrases
+                            <span class="tooltip-trigger" data-tooltip="Phrases or patterns you repeat often. Varying these can improve speech flow and engagement.">
+                                <span class="material-icons">help_outline</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="insight-content">
+                        <div class="repeated-phrases" id="repeatedPhrases">
+                            <div class="no-data">Complete deep analysis to see insights</div>
+                        </div>
+                    </div>
+                    <button class="insight-improve-btn" id="improvePhrases" disabled>
+                        <span class="material-icons">lightbulb</span>
+                        Get Variations
+                    </button>
+                </div>
+
+                <!-- Suggestions Modal -->
+                <div class="suggestions-modal" id="suggestionsModal" style="display: none;">
+                    <div class="suggestions-modal-content">
+                        <div class="suggestions-modal-header">
+                            <h3 id="suggestionsTitle">Speech Improvement Suggestions</h3>
+                            <button class="suggestions-close" id="closeSuggestions">
+                                <span class="material-icons">close</span>
+                            </button>
+                        </div>
+                        <div class="suggestions-modal-body">
+                            <div class="suggestions-loading" id="suggestionsLoading">
+                                <span class="material-icons">psychology</span>
+                                <div>Analyzing your speech patterns...</div>
+                            </div>
+                            <div class="suggestions-content" id="suggestionsContent"></div>
+                        </div>
+                        <div class="suggestions-modal-footer">
+                            <button class="btn-secondary" id="copySuggestions" disabled>
+                                <span class="material-icons">content_copy</span>
+                                Copy Suggestions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speech Analysis Section -->
+            <div class="speech-analysis-section" id="speechAnalysisSection" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-icons">psychology</span>
+                        Deep Speech Analysis
+                    </h2>
+                    <p class="section-subtitle">AI-powered analysis of your speech patterns and suggestions for improvement</p>
+                    <div class="form-description" style="margin-bottom: var(--spacing-md); padding: var(--spacing-sm); background: rgba(255, 255, 255, 0.05); border-radius: var(--radius-sm); border-left: 3px solid var(--accent);">
+                        <span class="material-icons" style="font-size: 16px; vertical-align: text-bottom; margin-right: var(--spacing-xs);">info</span>
+                        <strong>Analysis powered by OpenAI GPT-4o-mini.</strong> Each analysis uses approximately $0.0001-0.0003 in API credits. Ensure your OpenAI API key is configured in settings.
+                    </div>
+                </div>
+                
+                <div class="analysis-controls">
+                    <div class="analysis-toggle">
+                        <label class="toggle-label">Enable Deep Analysis (GPT-4o-mini)</label>
+                        <div class="toggle-container">
+                            <div class="toggle" id="enableAnalysisAnalytics" role="switch" aria-checked="false" tabindex="0">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-actions">
+                        <button class="btn-primary" id="runAnalysisAnalytics" disabled>
+                            <span class="material-icons">psychology</span>
+                            Run Analysis Now
+                        </button>
+                        <span class="analysis-status" id="analysisStatusAnalytics">Analysis disabled</span>
+                    </div>
+                </div>
+
+                <div class="analysis-results" id="analysisResultsAnalytics" style="display: none;">
+                    <h3 class="results-title">
+                        <span class="material-icons">assessment</span>
+                        Analysis Results
+                    </h3>
+                    <div class="results-content" id="analysisResultsContentAnalytics"></div>
+                </div>
+            </div>
+
+            <!-- Usage Analytics Section -->
+            <div class="usage-analytics-section" id="usageAnalyticsSection" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <span class="material-icons">insights</span>
+                        Usage Analytics
+                    </h2>
+                    <p class="section-subtitle">Privacy-safe insights into how you use Yappr's features</p>
+                </div>
+                
+                <div class="usage-grid">
+                    <!-- Feature Usage Chart -->
+                    <div class="usage-row">
+                        <div class="chart-container" title="See which Yappr features you use most frequently to understand your workflow patterns.">
+                            <div class="chart-title">
+                                <span class="material-icons">trending_up</span>
+                                Feature Usage
+                            </div>
+                            <div class="chart-canvas">
+                                <canvas id="featureUsageChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-container" title="Track your export activity and preferred formats for sharing your transcriptions.">
+                            <div class="chart-title">
+                                <span class="material-icons">file_download</span>
+                                Export Activity
+                            </div>
+                            <div class="chart-canvas">
+                                <canvas id="exportActivityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Folder Usage & Session Patterns -->
+                    <div class="usage-row">
+                        <div class="stats-container">
+                            <div class="chart-title">
+                                <span class="material-icons">folder</span>
+                                Folder Organization
+                            </div>
+                            <div class="usage-stats" id="folderUsageStats">
+                                <div class="stat-item">
+                                    <div class="stat-label">Total Folders</div>
+                                    <div class="stat-value" id="totalFolders">-</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Avg Transcriptions per Folder</div>
+                                    <div class="stat-value" id="avgTranscriptionsPerFolder">-</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Most Active Folder</div>
+                                    <div class="stat-value" id="mostActiveFolder">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stats-container">
+                            <div class="chart-title">
+                                <span class="material-icons">schedule</span>
+                                Session Patterns
+                            </div>
+                            <div class="usage-stats" id="sessionPatternStats">
+                                <div class="stat-item">
+                                    <div class="stat-label">Sessions This Week</div>
+                                    <div class="stat-value" id="sessionsThisWeek">-</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Avg Session Length</div>
+                                    <div class="stat-value" id="avgSessionLength">-</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-label">Peak Usage Time</div>
+                                    <div class="stat-value" id="peakUsageTime">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="usage-controls">
+                    <button class="btn-secondary" id="viewDetailedUsageBtn">
+                        <span class="material-icons">visibility</span>
+                        View Detailed Analytics
+                    </button>
+                    <button class="btn-secondary" id="exportUsageBtn">
+                        <span class="material-icons">file_download</span>
+                        Export Usage Data
+                    </button>
+                    <button class="btn-secondary" id="clearUsageBtn">
+                        <span class="material-icons">clear_all</span>
+                        Clear Usage Data
+                    </button>
+                </div>
+
+                <div class="privacy-notice">
+                    <div class="notice-content">
+                        <span class="material-icons">privacy_tip</span>
+                        <div class="notice-text">
+                            <strong>Privacy Protected:</strong> This usage data is stored locally on your device and never sent to external servers. 
+                            We don't track transcription content, website URLs, or personal information.
+                            <a href="settings.html" target="_blank">Manage analytics settings</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState" style="display: none;">
+                <span class="material-icons">analytics</span>
+                <div>Loading your analytics...</div>
+            </div>
+
+            <!-- Onboarding State -->
+            <div class="onboarding-state" id="onboardingState" style="display: none;">
+                <div class="onboarding-header">
+                    <span class="material-icons" style="font-size: 64px; color: var(--accent); margin-bottom: var(--spacing-md);">rocket_launch</span>
+                    <h2>Ready to Track Your Speech Journey?</h2>
+                    <p>Here's what your analytics dashboard will look like after recording sessions:</p>
+                </div>
+
+                <!-- Preview Charts Section -->
+                <div class="preview-section">
+                    <h3>📊 Your Future Dashboard</h3>
+                    <div class="preview-grid">
+                        <div class="preview-card">
+                            <div class="preview-chart">
+                                <canvas id="previewWpmChart" width="200" height="120"></canvas>
+                            </div>
+                            <div class="preview-label">Words Per Minute Trends</div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-chart">
+                                <canvas id="previewFillersChart" width="200" height="120"></canvas>
+                            </div>
+                            <div class="preview-label">Filler Words Improvement</div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-chart">
+                                <canvas id="previewVocabChart" width="200" height="120"></canvas>
+                            </div>
+                            <div class="preview-label">Vocabulary Diversity</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Getting Started Section -->
+                <div class="getting-started">
+                    <h3>🚀 How to Get Started</h3>
+                    <div class="steps-container">
+                        <div class="step-card">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Configure API Keys</h4>
+                                <p>Set up your OpenAI or ElevenLabs API keys in settings</p>
+                                <button class="btn-secondary" id="openSettingsBtn">
+                                    ⚙️ Open Settings
+                                </button>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Open Extension Popup</h4>
+                                <p>Click the Yappr extension icon in your browser</p>
+                                <div class="keyboard-shortcut">
+                                    <span class="shortcut-key">Cmd</span> + <span class="shortcut-key">Shift</span> + <span class="shortcut-key">P</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Start Recording</h4>
+                                <p>Click the record button and start speaking</p>
+                                <div class="feature-preview">🎤 Advanced speech-to-text powered by AI</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Unlock Section -->
+                <div class="unlock-progress">
+                    <h3>🏆 Unlock Features as You Progress</h3>
+                    <div class="progress-milestones">
+                        <div class="milestone">
+                            <div class="milestone-icon">📈</div>
+                            <div class="milestone-text">
+                                <strong>1 Session</strong><br>
+                                Basic analytics & trends
+                            </div>
+                        </div>
+                        <div class="milestone">
+                            <div class="milestone-icon">🧠</div>
+                            <div class="milestone-text">
+                                <strong>5 Sessions</strong><br>
+                                Advanced AI insights
+                            </div>
+                        </div>
+                        <div class="milestone">
+                            <div class="milestone-icon">💡</div>
+                            <div class="milestone-text">
+                                <strong>10 Sessions</strong><br>
+                                Personalized suggestions
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="onboarding-actions">
+                    <button class="btn-primary" id="getStartedBtn">
+                        🚀 Get Started Now
+                    </button>
+                </div>
+            </div>
+
+            <div class="yappr-footer">
+                <p>Yappr Analytics • Track your progress and improve your speech patterns</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="analytics.js"></script>
+</body>
+</html>

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder Details - Yappr</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        /* Folder detail page specific styles */
+        body {
+            padding: var(--spacing-xl);
+        }
+        
+        .folder-detail-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Logo header */
+        .logo-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .page-logo {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            color: var(--color-accent-primary);
+            text-decoration: none;
+            font-weight: var(--font-weight-medium);
+            margin-bottom: var(--spacing-lg);
+            transition: color var(--transition-fast);
+            font-size: var(--font-size-base);
+        }
+        
+        .back-link:hover {
+            color: var(--color-accent-secondary);
+        }
+        
+        .folder-header-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .folder-title-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .folder-title {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .folder-subtitle {
+            font-size: var(--font-size-lg);
+            color: var(--color-text-secondary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .edit-folder-btn {
+            background: var(--color-accent-primary);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .edit-folder-btn:hover {
+            background: var(--color-accent-secondary);
+            transform: translateY(-1px);
+        }
+        
+        .folder-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            font-size: var(--font-size-base);
+            color: var(--color-text-primary);
+        }
+        
+        .stat-item .material-icons {
+            color: var(--color-accent-primary);
+            font-size: var(--size-lg);
+        }
+        
+        .controls-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .section-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--spacing-lg);
+            align-items: start;
+        }
+        
+        .filter-controls {
+            display: grid;
+            grid-template-columns: 1fr auto auto auto auto;
+            gap: var(--spacing-md);
+            align-items: end;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .form-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-sm);
+            color: var(--color-text-primary);
+            font-size: var(--font-size-base);
+            padding: var(--spacing-sm);
+            transition: all var(--transition-fast);
+            height: 40px; /* Consistent height */
+        }
+        
+        .form-input:focus {
+            border-color: var(--color-accent-primary);
+            outline: none;
+            box-shadow: 0 0 0 3px var(--color-accent-light);
+        }
+        
+        /* Date input specific styling */
+        .form-input[type="date"] {
+            color-scheme: dark; /* Better appearance on dark backgrounds */
+            cursor: pointer;
+        }
+        
+        .form-input[type="date"]::-webkit-calendar-picker-indicator {
+            background-color: var(--color-text-secondary);
+            border-radius: 2px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .form-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+            background-color: var(--color-accent-primary);
+        }
+        
+        .form-input[type="date"]::-webkit-inner-spin-button,
+        .form-input[type="date"]::-webkit-clear-button {
+            display: none;
+        }
+        
+        .export-and-actions {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            align-items: flex-end;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        /* Select mode styling */
+        .select-toggle {
+            background: var(--primary-gradient);
+            border: 1px solid var(--accent);
+            height: 36px;
+            min-width: auto;
+        }
+        
+        .select-toggle.active {
+            background: var(--color-success);
+            border-color: var(--color-success);
+        }
+        
+        .bulk-actions {
+            display: none;
+            gap: var(--spacing-sm);
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .bulk-actions.show {
+            display: flex;
+        }
+        
+        .bulk-actions .selection-info {
+            margin-right: auto;
+        }
+        
+        .selection-info {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        
+        .export-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 5px);
+            right: 0;
+            background: var(--color-surface-primary);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-xs) 0;
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            display: none;
+        }
+        
+        /* Make the export button group relative for dropdown positioning */
+        .export-dropdown {
+            position: relative !important;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-item {
+            padding: var(--spacing-sm) var(--spacing-md);
+            cursor: pointer;
+            transition: background-color var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            color: var(--color-text-primary);
+            font-size: var(--font-size-sm);
+        }
+        
+        .dropdown-item:hover {
+            background: var(--color-surface-hover);
+        }
+        
+        .transcriptions-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+        }
+        
+        .transcription-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+        
+        .transcription-item {
+            background-color: rgba(32,32,58,0.6);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-md);
+            transition: all var(--transition-normal);
+            position: relative;
+        }
+        
+        .transcription-item:hover {
+            transform: translateY(-2px);
+            background-color: rgba(40,40,70,0.7);
+            border-color: var(--color-accent-primary);
+        }
+        
+        .transcription-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .transcription-meta {
+            flex: 1;
+        }
+        
+        .transcription-date {
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .transcription-stats {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+        }
+        
+        .transcription-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+        
+        .transcription-item:hover .transcription-actions {
+            opacity: 1;
+        }
+        
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-xs);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-secondary);
+            width: 32px;
+            height: 32px;
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--color-text-primary);
+            transform: scale(1.05);
+        }
+        
+        .action-btn.delete:hover {
+            background: var(--color-danger-light);
+            color: var(--color-danger);
+            border-color: var(--color-danger);
+        }
+        
+        .transcription-text {
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-normal);
+            color: var(--color-text-primary);
+            background: rgba(255, 255, 255, 0.03);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--color-accent-primary);
+        }
+        
+        /* Selection mode styling - proper flexbox layout */
+        .transcription-item.selection-mode {
+            cursor: pointer; /* Indicate the whole card is clickable */
+        }
+
+        .transcription-item.selection-mode:hover {
+            transform: translateY(-2px);
+            background-color: rgba(40,40,70,0.8);
+            border-color: var(--color-accent-primary);
+        }
+
+        .transcription-item.selected {
+            border-color: var(--accent);
+            background-color: rgba(169, 111, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(169, 111, 255, 0.3);
+        }
+
+        /* Content wrapper for flex layout */
+        .item-content {
+            display: flex;
+            align-items: center; /* Center vertically */
+            gap: var(--spacing-sm);
+            width: 100%;
+            min-height: 120px; /* Ensure minimum height for proper centering */
+        }
+
+        /* Main content area (everything except checkbox) */
+        .item-main {
+            flex: 1;
+            min-width: 0; /* Allows text to wrap/truncate properly */
+        }
+
+        /* Custom checkbox styling - hidden native checkbox */
+        .transcription-item .selection-checkbox {
+            display: none;
+        }
+        
+        /* Custom checkbox container */
+        .checkbox-label {
+            display: inline-block;
+            cursor: pointer;
+            flex-shrink: 0;
+            flex-grow: 0;
+            pointer-events: none; /* Let card handle clicks */
+        }
+        
+        /* Custom checkbox appearance */
+        .custom-checkbox {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            border: 2px solid var(--color-outline);
+            border-radius: 50%; /* Perfect circle for Material Design */
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            box-sizing: border-box;
+        }
+        
+        /* Custom checkmark */
+        .custom-checkbox::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        /* Show checkmark when checked */
+        .transcription-item .selection-checkbox:checked + .checkbox-label .custom-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .transcription-item .selection-checkbox:checked + .checkbox-label .custom-checkbox::after {
+            opacity: 1;
+        }
+
+        /* Prevent action buttons from triggering selection */
+        .transcription-item.selection-mode .transcription-actions {
+            position: relative;
+            z-index: 3;
+            pointer-events: auto;
+        }
+
+        .transcription-item.selection-mode .action-btn {
+            pointer-events: auto;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--spacing-4xl) var(--spacing-lg);
+            color: var(--color-text-secondary);
+        }
+        
+        .empty-state .material-icons {
+            font-size: 64px;
+            margin-bottom: var(--spacing-lg);
+            opacity: 0.5;
+            color: var(--color-text-tertiary);
+        }
+        
+        .empty-state h3 {
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: var(--spacing-4xl);
+            color: var(--color-text-secondary);
+        }
+        
+        .loading .material-icons {
+            font-size: 32px;
+            animation: spin 1s linear infinite;
+            color: var(--color-accent-primary);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: var(--color-surface-primary);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-header h3 {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .modal-body {
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .modal-body p {
+            color: var(--color-text-secondary);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-normal);
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+        }
+        
+        .form-description {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            margin-top: var(--spacing-xs);
+            line-height: var(--line-height-normal);
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: var(--color-accent-primary);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            height: 40px; /* Match form input height */
+            justify-content: center;
+        }
+        
+        .btn-primary:hover {
+            background: var(--color-accent-secondary);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border-primary);
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--color-accent-primary);
+        }
+        
+        .btn-danger {
+            background: var(--color-danger);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-danger:hover {
+            background: var(--color-danger-dark);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="folder-detail-container">
+        <!-- Logo Header -->
+        <div class="logo-header">
+            <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="page-logo">
+        </div>
+        
+        <a href="folders.html" class="back-link">
+            <span class="material-icons">arrow_back</span>
+            Back to Folders
+        </a>
+        
+        <div id="loading" class="loading">
+            <div class="material-icons">refresh</div>
+            <div>Loading folder details...</div>
+        </div>
+        
+        <div id="folderContent" style="display: none;">
+            <!-- Folder Header Card -->
+            <div class="folder-header-card">
+                <div class="folder-title-section">
+                    <div>
+                        <div class="folder-title">
+                            <span class="material-icons">folder</span>
+                            <span id="folderName">Loading...</span>
+                        </div>
+                        <div class="folder-subtitle">
+                            Activation phrase: "<span id="activationPhrase">Loading...</span>"
+                        </div>
+                    </div>
+                    <button class="edit-folder-btn" id="editFolderBtn">
+                        <span class="material-icons" style="font-size: 18px;">edit</span>
+                        Edit
+                    </button>
+                </div>
+                <div class="folder-stats">
+                    <div class="stat-item">
+                        <span class="material-icons">description</span>
+                        <span><span id="transcriptionCount">0</span> transcriptions</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="material-icons">schedule</span>
+                        <span>Created <span id="createdDate">Loading...</span></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="material-icons">text_fields</span>
+                        <span><span id="totalWords">0</span> words total</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls Card -->
+            <div class="controls-card">
+                <div class="section-title">
+                    <span class="material-icons">tune</span>
+                    Filter & Actions
+                </div>
+                <div class="controls-grid">
+                    <div class="filter-controls">
+                        <div class="form-group">
+                            <label class="form-label" for="searchBox">Search transcriptions</label>
+                            <input type="text" id="searchBox" class="form-input" placeholder="Search transcriptions...">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="dateFrom">From date</label>
+                            <input type="date" id="dateFrom" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="dateTo">To date</label>
+                            <input type="date" id="dateTo" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <button class="btn-primary select-toggle" id="selectBtn">
+                                <span class="material-icons">checklist</span>
+                                Select
+                            </button>
+                        </div>
+                        <div class="form-group export-dropdown">
+                            <button class="btn-primary" id="exportBtn">
+                                <span class="material-icons">download</span>
+                                Export
+                            </button>
+                            <div id="exportDropdown" class="dropdown-menu">
+                                <div class="dropdown-item" data-format="txt">
+                                    <span class="material-icons">text_snippet</span>
+                                    Export as Text
+                                </div>
+                                <div class="dropdown-item" data-format="csv">
+                                    <span class="material-icons">table_chart</span>
+                                    Export as CSV
+                                </div>
+                                <div class="dropdown-item" data-format="json">
+                                    <span class="material-icons">code</span>
+                                    Export as JSON
+                                </div>
+                                <div class="dropdown-item" data-format="selected">
+                                    <span class="material-icons">checklist</span>
+                                    Export Selected Only
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <!-- Bulk actions bar (separate card when in selection mode) -->
+            <div class="controls-card bulk-actions" id="bulkActions" style="display: none;">
+                <span class="selection-info" id="selectionInfo">0 selected</span>
+                <button class="btn-secondary" id="copySelectedBtn">
+                    <span class="material-icons">content_copy</span>
+                    Copy
+                </button>
+                <button class="btn-secondary" id="exportSelectedBtn">
+                    <span class="material-icons">download</span>
+                    Export Selected
+                </button>
+                <button class="btn-secondary" id="selectAll">
+                    <span class="material-icons">select_all</span>
+                    Select All
+                </button>
+                <button class="btn-secondary" id="deselectAll">
+                    <span class="material-icons">deselect</span>
+                    Deselect All
+                </button>
+                <button class="btn-danger" id="deleteSelected">
+                    <span class="material-icons">delete</span>
+                    Delete Selected
+                </button>
+            </div>
+            
+            <!-- Transcriptions Card -->
+            <div class="transcriptions-card">
+                <div class="section-title">
+                    <span class="material-icons">description</span>
+                    Transcriptions
+                </div>
+                
+                <div id="transcriptionGrid" class="transcription-grid"></div>
+                
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="material-icons">description</div>
+                    <h3>No transcriptions found</h3>
+                    <p>This folder doesn't contain any transcriptions yet, or none match your current filters.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Folder Modal -->
+    <div id="editFolderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Folder</h3>
+            </div>
+            <div class="modal-body">
+                <form id="editFolderForm">
+                    <div class="form-group">
+                        <label class="form-label" for="editFolderName">Folder Name</label>
+                        <input type="text" id="editFolderName" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="editActivationPhrase">Activation Phrase</label>
+                        <input type="text" id="editActivationPhrase" class="form-input" placeholder="e.g., I have an idea" required>
+                        <small class="form-description">Transcriptions starting with this phrase will be automatically placed in this folder.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelEditBtn">Cancel</button>
+                <button class="btn-primary" id="saveEditBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmTitle">Confirm Action</h3>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="confirmCancel">Cancel</button>
+                <button class="btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="folder-detail.js"></script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none'; base-uri 'self';">
+    <title>Welcome to Yappr!</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        body {
+            padding: var(--spacing-xl);
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .welcome-header {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .welcome-logo {
+            height: 80px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .welcome-steps {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+            margin: var(--spacing-xl) 0;
+        }
+        
+        .welcome-step {
+            background: rgba(26,26,47,0.75);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: left;
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: var(--spacing-md);
+            background: var(--accent);
+            color: var(--color-white);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .step-title {
+            color: var(--accent);
+            margin-bottom: var(--spacing-sm);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .step-action {
+            margin-top: var(--spacing-md);
+        }
+        
+        .btn-setup {
+            background: var(--accent);
+            color: var(--color-white);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .btn-setup:hover {
+            background: var(--color-accent-dark);
+        }
+        
+        .welcome-footer {
+            margin-top: var(--spacing-xl);
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--color-outline);
+        }
+        
+        .product-choice {
+            background: var(--color-info-light);
+            border: 1px solid var(--color-info);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .product-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            margin-top: var(--spacing-md);
+        }
+        
+        .product-option {
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-sm);
+            text-align: center;
+        }
+        
+        .product-option strong {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-header">
+        <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="welcome-logo">
+        <h1>Welcome to Yappr!</h1>
+        <p>Transform your voice into intelligent text anywhere on the web</p>
+    </div>
+
+    <div class="product-choice">
+        <h3>🎯 Did you know?</h3>
+        <p>Yappr is also available as a <strong>macOS application</strong> that works across all your applications - not just web browsers!</p>
+        <div class="product-options">
+            <div class="product-option">
+                <strong>Chrome Extension</strong><br>
+                <small>Free • Web browsers only</small>
+            </div>
+            <div class="product-option">
+                <strong>macOS App</strong><br>
+                <small>Premium • System-wide</small>
+            </div>
+        </div>
+        <p><a href="https://yappr.pro" target="_blank" style="color: var(--accent);">Visit yappr.pro to compare options</a></p>
+    </div>
+
+    <div class="welcome-steps">
+        <div class="welcome-step">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Get Your ElevenLabs API Key</h3>
+            <p>You'll need an API key from ElevenLabs for speech-to-text transcription. Don't worry - it's free to get started!</p>
+            <div class="step-action">
+                <a href="https://try.elevenlabs.io/yappr-chrome" target="_blank" class="btn-setup">
+                    <span class="material-icons">launch</span>
+                    Get ElevenLabs Key
+                </a>
+            </div>
+        </div>
+
+        <div class="welcome-step">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Configure Your Extension</h3>
+            <p>Add your API key to the extension and you're ready to start transcribing!</p>
+            <div class="step-action">
+                <button id="openSettings" class="btn-setup">
+                    <span class="material-icons">settings</span>
+                    Open Settings
+                </button>
+            </div>
+        </div>
+
+        <div class="welcome-step">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Start Recording!</h3>
+            <p>Press <strong>Cmd+Shift+U</strong> (Mac) or <strong>Ctrl+Shift+U</strong> (Windows) anywhere on the web to start recording.</p>
+            <div class="step-action">
+                <button id="testRecording" class="btn-setup">
+                    <span class="material-icons">mic</span>
+                    Test Recording
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="welcome-footer">
+        <p>Need help? Visit our <a href="help.html" target="_blank" style="color: var(--accent);">help center</a> or contact <a href="mailto:support@yappr.pro" style="color: var(--accent);">support@yappr.pro</a></p>
+        <p><small>This welcome screen won't show again. You can always access help from the extension popup.</small></p>
+    </div>
+
+    <script src="welcome.js"></script>
+</body>
+</html>

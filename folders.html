@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yappr - Folders</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        /* Folders page specific styles */
+        body {
+            padding: var(--spacing-xl);
+        }
+        
+        .yappr-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Logo header */
+        .logo-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .page-logo {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .folders-controls {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-xl);
+            min-height: 36px; /* Ensure consistent height */
+        }
+        
+        .search-filter-box {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .search-filter-box .yappr-input {
+            height: 36px; /* Match button height */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-sm);
+        }
+        
+        .folders-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-shrink: 0;
+            align-items: center;
+        }
+        
+        .folders-view-toggle {
+            display: flex;
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: 2px;
+            gap: 1px;
+            height: 36px; /* Match button height */
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .view-toggle-btn {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: none;
+            border: none;
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            border-radius: calc(var(--radius-lg) - 2px); /* Match container radius minus padding */
+            transition: all var(--transition-fast);
+            font-size: var(--font-size-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px; /* Fit within toggle container */
+            width: 32px; /* Square buttons */
+            flex-shrink: 0;
+        }
+        
+        .view-toggle-btn.active {
+            background: var(--primary-gradient);
+            color: var(--color-white);
+        }
+        
+        .view-toggle-btn:hover:not(.active) {
+            background: var(--color-surface-hover);
+            color: var(--color-text-primary);
+        }
+        
+        .view-toggle-btn .material-icons {
+            font-size: 18px;
+        }
+        
+        /* Folders grid */
+        .folders-grid {
+            display: grid;
+            gap: var(--spacing-md);
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            transition: all 0.3s ease;
+        }
+        
+        /* List view styling */
+        .folders-grid.list-view {
+            grid-template-columns: 1fr;
+            gap: var(--spacing-sm);
+        }
+        
+        .folders-grid.list-view .folder-card {
+            padding: var(--spacing-sm) var(--spacing-md);
+            min-height: auto;
+        }
+        
+        .folders-grid.list-view .folder-card .folder-header {
+            align-items: center;
+            margin-bottom: 0;
+        }
+        
+        .folders-grid.list-view .create-new {
+            flex-direction: row;
+            justify-content: flex-start;
+            text-align: left;
+            min-height: 60px;
+        }
+        
+        .folders-grid.list-view .create-new .material-icons {
+            font-size: 24px;
+            margin-bottom: 0;
+            margin-right: var(--spacing-sm);
+        }
+        
+        .folder-card {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-sm);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            min-height: 120px;
+        }
+        
+        .folder-card.create-new {
+            border: 2px dashed var(--accent);
+            background: rgba(169, 111, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 120px;
+        }
+        
+        .folder-card.create-new:hover {
+            background: rgba(169, 111, 255, 0.1);
+            border-color: #A96FFF;
+            transform: translateY(-2px);
+        }
+        
+        .create-new .material-icons {
+            font-size: 32px;
+            color: var(--accent);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .create-new .create-text {
+            color: var(--accent);
+            font-weight: var(--font-weight-medium);
+            font-size: var(--font-size-sm);
+        }
+        
+        .folder-card:hover {
+            transform: translateY(-4px);
+            background-color: rgba(32,32,58,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Prevent text selection highlighting on hover */
+        .folder-card * {
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+        
+        .folder-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .folder-info {
+            flex: 1;
+        }
+        
+        .folder-name {
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .folder-icon {
+            font-size: var(--font-size-xl);
+            color: var(--accent);
+        }
+        
+        .folder-phrase {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            font-style: italic;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .folder-stats {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-tertiary);
+        }
+        
+        .folder-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .folder-card:hover .folder-actions {
+            opacity: 1;
+        }
+        
+        .folder-card.folder-clickable {
+            cursor: pointer;
+        }
+        
+        .folder-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background-color: rgba(26,26,47,0.75);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .folder-action-btn:hover {
+            background-color: rgba(32,32,58,0.8);
+            color: var(--color-text-primary);
+            transform: scale(1.1);
+        }
+        
+        .folder-action-btn.delete:hover {
+            background-color: var(--color-danger);
+            color: var(--color-white);
+        }
+        
+        /* Folder selection mode styling */
+        .folder-card.selection-mode {
+            position: relative;
+            padding-left: calc(var(--spacing-sm) + 32px); /* Make room for checkbox */
+            cursor: pointer; /* Indicate the whole card is clickable */
+        }
+        
+        .folder-card.selection-mode:hover {
+            transform: translateY(-4px);
+            background-color: rgba(32,32,58,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .folder-card.selected {
+            border-color: var(--accent);
+            background-color: rgba(169, 111, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(169, 111, 255, 0.3);
+        }
+        
+        .folder-card .folder-selection-checkbox {
+            position: absolute;
+            left: var(--spacing-sm);
+            top: 50%;
+            transform: translateY(-50%); /* Center vertically */
+            width: 20px;
+            height: 20px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            border: 2px solid var(--color-outline);
+            border-radius: 50%; /* Round Material Design style */
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0;
+            outline: none;
+            z-index: 2;
+            pointer-events: none; /* Let card handle clicks */
+        }
+        
+        .folder-card .folder-selection-checkbox:checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            position: relative;
+        }
+        
+        .folder-card .folder-selection-checkbox:checked::before {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
+        /* Prevent action buttons from triggering selection */
+        .folder-card.selection-mode .folder-actions {
+            position: relative;
+            z-index: 3;
+            pointer-events: auto;
+        }
+        
+        .folder-card.selection-mode .folder-action-btn {
+            pointer-events: auto;
+        }
+        
+        /* Select mode styling */
+        .select-toggle {
+            background: var(--primary-gradient);
+            border: 1px solid var(--accent);
+            height: 36px;
+            min-width: auto;
+        }
+        
+        .select-toggle.active {
+            background: var(--color-success);
+            border-color: var(--color-success);
+        }
+        
+        .bulk-actions {
+            display: none;
+            gap: var(--spacing-sm);
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .bulk-actions.show {
+            display: flex;
+        }
+        
+        .bulk-actions .selection-info {
+            margin-right: auto;
+        }
+        
+        .selection-info {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+        }
+        
+        /* All transcriptions view */
+        .transcriptions-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        }
+        
+        .transcription-item {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .transcription-item:hover {
+            transform: translateY(-4px);
+            background-color: rgba(32,32,58,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .transcription-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .transcription-meta {
+            flex: 1;
+        }
+        
+        .transcription-date {
+            font-weight: bold;
+            color: var(--color-success);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .transcription-stats {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-tertiary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .transcription-folder-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            background: var(--color-accent-light);
+            color: var(--accent);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .transcription-text {
+            line-height: 1.6;
+            font-size: var(--font-size-sm);
+            color: var(--color-text-primary);
+            margin-top: var(--spacing-sm);
+        }
+        
+        .transcription-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .transcription-item:hover .transcription-actions {
+            opacity: 1;
+        }
+        
+        .transcription-action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background-color: rgba(26,26,47,0.75);
+            color: var(--color-text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .transcription-action-btn:hover {
+            background-color: rgba(32,32,58,0.8);
+            color: var(--color-text-primary);
+            transform: scale(1.1);
+        }
+        
+        /* Empty states */
+        .empty-state {
+            text-align: center;
+            padding: 60px var(--spacing-lg);
+            opacity: 0.7;
+        }
+        
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .empty-state p {
+            font-size: var(--font-size-base);
+            color: var(--color-text-secondary);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: var(--font-size-lg);
+        }
+        
+        /* Create folder modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background-color: rgba(26,26,47,0.95);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            max-width: 500px;
+            width: 90%;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.visible .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-lg);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .modal-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+        }
+        
+        .form-label {
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-medium);
+            color: var(--color-text-primary);
+        }
+        
+        .form-input {
+            padding: var(--spacing-sm);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--color-text-primary);
+            font-size: var(--font-size-base);
+            transition: all var(--transition-fast);
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--color-accent-light);
+        }
+        
+        .form-input::placeholder {
+            color: var(--color-text-muted);
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            margin-top: var(--spacing-lg);
+        }
+        
+        @media (max-width: 768px) {
+            .folders-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-filter-box {
+                min-width: 100%;
+                margin-bottom: var(--spacing-sm);
+            }
+            
+            .folders-grid,
+            .transcriptions-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="yappr-page">
+        <div class="yappr-container">
+            <!-- Logo Header -->
+            <div class="logo-header">
+                <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="page-logo" />
+            </div>
+            
+            
+            <!-- Navigation Menu -->
+            <nav class="nav-menu">
+                <a href="analytics.html" class="nav-item">
+                    <span class="material-icons">assessment</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="history.html" class="nav-item">
+                    <span class="material-icons">history</span>
+                    <span class="nav-item-text">History</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="folders.html" class="nav-item active">
+                    <span class="material-icons">folder</span>
+                    <span class="nav-item-text">Folders</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="settings.html" class="nav-item">
+                    <span class="material-icons">settings</span>
+                    <span class="nav-item-text">Settings</span>
+                </a>
+            </nav>
+            
+
+            <!-- Controls -->
+            <div class="yappr-card folders-controls">
+                <div class="search-filter-box">
+                    <input type="text" id="searchBox" class="yappr-input" placeholder="Search folders and transcriptions...">
+                </div>
+                <div class="folders-actions">
+                    <div class="folders-view-toggle">
+                        <button class="view-toggle-btn active" id="gridViewBtn" data-view="grid">
+                            <span class="material-icons">apps</span>
+                        </button>
+                        <button class="view-toggle-btn" id="listViewBtn" data-view="list">
+                            <span class="material-icons">view_list</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bulk actions bar (separate card when in selection mode) -->
+            <div class="yappr-card bulk-actions" id="bulkFolderActions" style="display: none;">
+                <span class="selection-info" id="folderSelectionInfo">0 selected</span>
+                <button class="btn-secondary" id="renameFoldersBtn">
+                    <span class="material-icons">edit</span>
+                    Rename
+                </button>
+                <button class="btn-secondary" id="mergeFoldersBtn">
+                    <span class="material-icons">merge_type</span>
+                    Merge
+                </button>
+                <button class="btn-secondary" id="exportFoldersBtn">
+                    <span class="material-icons">download</span>
+                    Export
+                </button>
+                <button class="btn-danger" id="deleteFoldersBtn">
+                    <span class="material-icons">delete</span>
+                    Delete
+                </button>
+            </div>
+
+            <!-- Loading state -->
+            <div class="loading" id="loading">
+                Loading folders and transcriptions...
+            </div>
+
+            <!-- Folders view -->
+            <div id="foldersView" class="folders-view">
+                <div class="empty-state" id="emptyFoldersState" style="display: none;">
+                    <h3>No folders found</h3>
+                    <p>Create your first folder to organize transcriptions by activation phrases!</p>
+                </div>
+                <div class="folders-grid" id="foldersGrid">
+                    <!-- Folder cards will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- List view will use the same folders grid but with different styling -->
+        </div>
+    </div>
+
+    <!-- Create Folder Modal -->
+    <div class="modal" id="createFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="material-icons">create_new_folder</span>
+                Create New Folder
+            </div>
+            <form class="modal-form" id="createFolderForm">
+                <div class="form-group">
+                    <label class="form-label" for="folderName">Folder Name</label>
+                    <input type="text" id="folderName" class="form-input" placeholder="e.g., Ideas, Meeting Notes, Todo Items" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="activationPhrase">Activation Phrase</label>
+                    <input type="text" id="activationPhrase" class="form-input" placeholder="e.g., I have an idea, Meeting note, Add to todo" required>
+                    <small style="color: var(--color-text-muted); font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">
+                        Transcriptions starting with this phrase will be automatically assigned to this folder.
+                    </small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelCreateBtn">Cancel</button>
+                    <button type="submit" class="btn-primary">Create Folder</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Folder Modal -->
+    <div class="modal" id="editFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="material-icons">edit</span>
+                Edit Folder
+            </div>
+            <form class="modal-form" id="editFolderForm">
+                <div class="form-group">
+                    <label class="form-label" for="editFolderName">Folder Name</label>
+                    <input type="text" id="editFolderName" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editActivationPhrase">Activation Phrase</label>
+                    <input type="text" id="editActivationPhrase" class="form-input" required>
+                    <small style="color: var(--color-text-muted); font-size: var(--font-size-xs); margin-top: var(--spacing-xs);">
+                        Transcriptions starting with this phrase will be automatically assigned to this folder.
+                    </small>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="material-icons">warning</span>
+                Confirm Action
+            </div>
+            <p id="confirmMessage" style="margin-bottom: var(--spacing-lg); color: var(--color-text-secondary);">
+                Are you sure you want to proceed?
+            </p>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="confirmCancel">Cancel</button>
+                <button class="btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="folders.js"></script>
+</body>
+</html>

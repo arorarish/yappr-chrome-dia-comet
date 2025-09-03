@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self'; object-src 'none'; base-uri 'self';">
+    <title>Yappr Help & Support</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        body {
+            padding: var(--spacing-xl);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .help-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .help-logo {
+            height: 60px;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .help-section {
+            background: rgba(26,26,47,0.75);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .help-section h2 {
+            color: var(--accent);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .step-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .step-list li {
+            background: rgba(255, 255, 255, 0.05);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent);
+        }
+        
+        .step-number {
+            background: var(--accent);
+            color: var(--color-white);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: var(--font-size-sm);
+            margin-right: var(--spacing-sm);
+        }
+        
+        .shortcut-key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-family: monospace;
+            font-weight: bold;
+        }
+        
+        .contact-info {
+            background: var(--color-info-light);
+            border: 1px solid var(--color-info);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            text-align: center;
+        }
+        
+        .contact-info a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="help-header">
+        <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="help-logo">
+        <h1>Help & Support</h1>
+        <p>Everything you need to get started with Yappr</p>
+    </div>
+
+    <div class="help-section">
+        <h2>
+            <span class="material-icons">play_arrow</span>
+            Quick Start Guide
+        </h2>
+        <ol class="step-list">
+            <li>
+                <span class="step-number">1</span>
+                <strong>Get your ElevenLabs API key</strong><br>
+                Visit <a href="https://try.elevenlabs.io/yappr-chrome" target="_blank">ElevenLabs</a> and create an account to get your API key
+            </li>
+            <li>
+                <span class="step-number">2</span>
+                <strong>Configure the extension</strong><br>
+                Click the Yappr icon → Settings → Enter your ElevenLabs API key
+            </li>
+            <li>
+                <span class="step-number">3</span>
+                <strong>Choose your preset</strong><br>
+                In the popup, select "Basic", "Email", or "Professional" enhancement preset
+            </li>
+            <li>
+                <span class="step-number">4</span>
+                <strong>Start recording</strong><br>
+                Press <span class="shortcut-key">Cmd+Shift+U</span> (Mac) or <span class="shortcut-key">Ctrl+Shift+U</span> (Windows) anywhere on the web
+            </li>
+        </ol>
+    </div>
+
+    <div class="help-section">
+        <h2>
+            <span class="material-icons">keyboard</span>
+            Keyboard Shortcuts
+        </h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md);">
+            <div>
+                <strong>Start/Stop Recording:</strong><br>
+                <span class="shortcut-key">Cmd+Shift+U</span> (Mac)<br>
+                <span class="shortcut-key">Ctrl+Shift+U</span> (Windows/Linux)
+            </div>
+            <div>
+                <strong>Cancel Recording:</strong><br>
+                <span class="shortcut-key">Escape</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>
+            <span class="material-icons">auto_fix_high</span>
+            Enhancement Presets
+        </h2>
+        <ul>
+            <li><strong>Basic:</strong> Removes filler words, fixes grammar, cleans transcription artifacts</li>
+            <li><strong>Email:</strong> Formats your speech into professional email structure</li>
+            <li><strong>Professional:</strong> Transforms casual speech into formal business language</li>
+        </ul>
+        <p><em>Note: AI enhancement requires an OpenAI API key (~$0.0001-0.0003 per use)</em></p>
+    </div>
+
+    <div class="help-section">
+        <h2>
+            <span class="material-icons">help_outline</span>
+            Troubleshooting
+        </h2>
+        <div style="margin-bottom: var(--spacing-md);">
+            <strong>Recording not starting?</strong>
+            <ul>
+                <li>Check that your ElevenLabs API key is configured in Settings</li>
+                <li>Make sure your microphone permissions are enabled</li>
+                <li>Try clicking the "Start Recording" button in the popup</li>
+            </ul>
+        </div>
+        <div style="margin-bottom: var(--spacing-md);">
+            <strong>Text not enhancing?</strong>
+            <ul>
+                <li>Ensure you've selected a preset (Basic, Email, or Professional)</li>
+                <li>Add your OpenAI API key in Settings for AI enhancement features</li>
+                <li>Check that you have sufficient API credits</li>
+            </ul>
+        </div>
+        <div>
+            <strong>Text not inserting into webpage?</strong>
+            <ul>
+                <li>Click on the text field before recording</li>
+                <li>If insertion fails, text is automatically copied to your clipboard</li>
+                <li>Try pasting with Ctrl+V (Windows) or Cmd+V (Mac)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="help-section">
+        <h2>
+            <span class="material-icons">security</span>
+            Privacy & Security
+        </h2>
+        <p>Yappr is built with privacy as a core principle:</p>
+        <ul>
+            <li>✅ All data stored locally in your browser</li>
+            <li>✅ API keys never leave your device (except to call the services you choose)</li>
+            <li>✅ No analytics, tracking, or external servers</li>
+            <li>✅ Audio only sent to your chosen STT provider (ElevenLabs)</li>
+            <li>✅ Transcripts only sent to OpenAI if you use AI enhancement</li>
+        </ul>
+    </div>
+
+    <div class="contact-info">
+        <h2>
+            <span class="material-icons">contact_support</span>
+            Need More Help?
+        </h2>
+        <p>We're here to help! Get in touch with our support team:</p>
+        <p>
+            <strong>Email:</strong> <a href="mailto:support@yappr.pro">support@yappr.pro</a><br>
+            <strong>Website:</strong> <a href="https://yappr.pro" target="_blank">yappr.pro</a><br>
+            <strong>Response time:</strong> Usually within 24 hours
+        </p>
+        <div style="margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-outline);">
+            <small>
+                <strong>Having issues?</strong> Please include your browser version, operating system, 
+                and a description of what you were trying to do when contacting support.
+            </small>
+        </div>
+    </div>
+
+    <script src="help.js"></script>
+</body>
+</html>

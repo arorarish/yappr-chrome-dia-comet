@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        
+        .recording-indicator {
+            position: fixed;
+            top: var(--spacing-sm);
+            right: var(--spacing-sm);
+            background: var(--color-danger);
+            color: var(--color-white);
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            font-size: var(--font-size-base);
+            font-weight: var(--font-weight-medium);
+            font-family: var(--font-family-primary);
+            z-index: var(--z-toast);
+            box-shadow: var(--shadow-lg);
+            animation: pulse 2s infinite;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-xs);
+        }
+        
+        .recording-dot {
+            width: var(--size-xs);
+            height: var(--size-xs);
+            background: var(--color-white);
+            border-radius: var(--radius-full);
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="recording-indicator">
+        <div class="recording-dot"></div>
+        <span>🎤 Recording... (Cmd+Shift+P to stop)</span>
+    </div>
+</body>
+</html>

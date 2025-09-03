@@ -1,0 +1,365 @@
+/**
+ * Yappr Design System
+ * Core design tokens and variables
+ * Inspired by modern dashboard aesthetics
+ */
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+:root {
+  /* ================================
+     TYPOGRAPHY SYSTEM
+     ================================ */
+  
+  /* Font families */
+  --font-family-primary: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-family-mono: "SF Mono", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* Font sizes - Purple Vibe Typography */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;   /* small text */
+  --font-size-base: 16px; /* body text */
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;   /* H2 */
+  --font-size-2xl: 24px;  /* H1 */
+  --font-size-3xl: 28px;
+  --font-size-4xl: 32px;
+  --font-size-5xl: 40px;
+
+  /* Line heights */
+  --line-height-none: 1;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ================================
+     COLOR SYSTEM - PURPLE VIBE THEME
+     ================================ */
+
+  /* Background colors */
+  --bg-default: #0F0F17;
+  --bg-surface: #191923;
+  --bg-elevated: #25252F;
+  --color-bg-primary: var(--bg-default);
+  --color-bg-secondary: var(--bg-surface);
+  --color-bg-tertiary: var(--bg-elevated);
+  --color-bg-start: var(--bg-default);
+  --color-bg-end: var(--bg-surface);
+
+  /* Surface colors (cards, panels, overlays) */
+  --color-surface-primary: var(--bg-surface);
+  --color-surface-secondary: rgba(25, 25, 35, 0.8);
+  --color-surface-elevated: var(--bg-elevated);
+  --color-surface-hover: rgba(37, 37, 47, 0.9);
+
+  /* Text colors */
+  --text-primary: #FFFFFF;
+  --text-secondary: #BBBBCC;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #BBBBCC;
+  --color-text-tertiary: #8888AA;
+  --color-text-muted: #666677;
+  --color-text-inverse: var(--bg-default);
+  --color-white: #ffffff;
+
+  /* Purple gradient and accent colors */
+  --primary-gradient: linear-gradient(135deg, #A96FFF 0%, #7E42FF 100%);
+  --accent: #6B52E1;
+  --color-accent-primary: var(--accent);
+  --color-accent-secondary: #8B6BFF;
+  --color-accent-gradient: var(--primary-gradient);
+  --color-accent-light: rgba(107, 82, 225, 0.1);
+  --color-accent-lighter: rgba(107, 82, 225, 0.05);
+
+  /* Status colors */
+  --color-success: #4CAF50;
+  --color-success-light: rgba(76, 175, 80, 0.1);
+  --color-success-alt: #10b981;
+  --color-warning: #FF9800;
+  --color-warning-light: rgba(255, 152, 0, 0.1);
+  --color-warning-alt: #fbbf24;
+  --color-danger: #FF6B6B;
+  --color-danger-light: rgba(255, 107, 107, 0.1);
+  --color-danger-dark: #ff5252;
+  --color-info: #2196F3;
+  --color-info-light: rgba(33, 150, 243, 0.1);
+  --color-slate-light: #94a3b8;
+  --color-slate: #64748b;
+
+  /* Border colors */
+  --color-border-primary: rgba(255, 255, 255, 0.08);
+  --color-border-secondary: rgba(255, 255, 255, 0.05);
+  --color-border-accent: rgba(79, 195, 247, 0.3);
+  
+  /* Outline colors */
+  --color-outline: rgba(255, 255, 255, 0.1);
+  
+  /* Button-specific aliases */
+  --color-accent: var(--accent);
+  
+  /* Panel background aliases */
+  --panel-bg: rgba(26, 26, 47, 0.75);
+  --panel-bg-hover: rgba(32, 32, 58, 0.8);
+
+  /* ================================
+     SPACING SYSTEM - 4px Grid
+     ================================ */
+
+  /* Base unit: 4px */
+  --spacing-unit: 4px;
+
+  /* Spacing scale on 4px grid */
+  --spacing-1: calc(var(--spacing-unit) * 1);     /* 4px */
+  --spacing-2: calc(var(--spacing-unit) * 2);     /* 8px */
+  --spacing-3: calc(var(--spacing-unit) * 3);     /* 12px */
+  --spacing-4: calc(var(--spacing-unit) * 4);     /* 16px */
+  --spacing-5: calc(var(--spacing-unit) * 5);     /* 20px */
+  --spacing-6: calc(var(--spacing-unit) * 6);     /* 24px */
+  --spacing-8: calc(var(--spacing-unit) * 8);     /* 32px */
+  --spacing-10: calc(var(--spacing-unit) * 10);   /* 40px */
+  --spacing-12: calc(var(--spacing-unit) * 12);   /* 48px */
+  --spacing-16: calc(var(--spacing-unit) * 16);   /* 64px */
+  
+  /* Legacy aliases for existing code */
+  --spacing-xs: var(--spacing-2);     /* 8px */
+  --spacing-sm: var(--spacing-3);     /* 12px */
+  --spacing-md: var(--spacing-6);     /* 24px */
+  --spacing-lg: var(--spacing-8);     /* 32px */
+  --spacing-xl: var(--spacing-12);    /* 48px */
+  --spacing-2xl: var(--spacing-16);   /* 64px */
+
+  /* ================================
+     BORDER RADIUS SYSTEM
+     ================================ */
+
+  --radius-input: 4px;   /* for inputs */
+  --radius-card: 8px;    /* for cards */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* ================================
+     SHADOWS SYSTEM
+     ================================ */
+
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-2: 0 4px 6px rgba(0, 0, 0, 0.16);
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.25);
+
+  /* Glass morphism effects */
+  --glass-bg: rgba(26, 26, 47, 0.7);
+  --glass-bg-hover: rgba(32, 32, 58, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-backdrop: blur(12px);
+  
+  /* Blur & texture effects */
+  --backdrop-blur: 12px;
+  --texture-overlay: url('../icons/noise.png') repeat;
+  
+  /* Small sizes for icon elements */
+  --size-xs: 8px;
+  --size-sm: 12px;
+  --size-md: 16px;
+  --size-lg: 20px;
+  --size-xl: 24px;
+  
+  /* Legacy compatibility - will be removed */
+  --border-color: var(--color-border-primary);
+  --border-radius-lg: var(--radius-lg);
+
+  /* ================================
+     MOTION SYSTEM
+     ================================ */
+
+  /* Transition durations */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+
+  /* Transition timing functions */
+  --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Common transitions */
+  --transition-colors: color var(--duration-normal) var(--ease-out), 
+                       background-color var(--duration-normal) var(--ease-out),
+                       border-color var(--duration-normal) var(--ease-out);
+  --transition-shadows: box-shadow var(--duration-normal) var(--ease-out);
+  --transition-transforms: transform var(--duration-fast) var(--ease-out);
+  --transition-all: all var(--duration-normal) var(--ease-out);
+  
+  /* Legacy compatibility */
+  --transition-fast: var(--duration-fast) var(--ease-out);
+  --transition-normal: var(--duration-normal) var(--ease-out);
+  --transition-slow: var(--duration-slow) var(--ease-out);
+
+  /* ================================
+     Z-INDEX SYSTEM
+     ================================ */
+
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+  --z-toast: 1080;
+
+  /* ================================
+     COMPONENT SPECIFIC
+     ================================ */
+
+  /* Buttons */
+  --btn-height-sm: 32px;
+  --btn-height-md: 40px;
+  --btn-height-lg: 48px;
+  
+  /* Popup dimensions */
+  --popup-width: 320px;
+  --popup-min-height: 450px;
+
+  /* Cards */
+  --card-padding: var(--spacing-md);
+  --card-padding-sm: var(--spacing-sm);
+  --card-padding-lg: var(--spacing-lg);
+
+  /* Form elements */
+  --input-height: 44px;
+  --input-padding-x: var(--spacing-sm);
+  --input-border-width: 1px;
+
+  /* Navigation */
+  --nav-height: 64px;
+  --sidebar-width: 280px;
+  
+  /* Layout */
+  --container-width-sm: 800px;
+  --container-width-md: 1200px;
+  --container-width-lg: 1400px;
+  
+  /* Chart dimensions */
+  --chart-height-sm: 200px;
+  --chart-height-md: 320px;
+  --chart-height-lg: 400px;
+  
+  /* Grid minimums */
+  --grid-min-200: 200px;
+  --grid-min-250: 250px;
+  --grid-min-280: 280px;
+}
+
+/* ================================
+   GLOBAL TYPOGRAPHY CLASSES
+   ================================ */
+
+.text-h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+.text-h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+.text-h3 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.text-subhead {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+.text-body {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.text-caption {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+.text-small {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-tertiary);
+}
+
+/* ================================
+   UTILITY CLASSES
+   ================================ */
+
+/* Text colors */
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+.text-muted { color: var(--color-text-muted); }
+.text-accent { color: var(--color-accent-primary); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+
+/* Background colors */
+.bg-surface { background: var(--color-surface-primary); }
+.bg-surface-elevated { background: var(--color-surface-elevated); }
+.bg-accent { background: var(--color-accent-primary); }
+.bg-accent-light { background: var(--color-accent-light); }
+
+/* Border radius */
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
+.rounded-full { border-radius: var(--radius-full); }
+
+/* Shadows */
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
+.shadow-xl { box-shadow: var(--shadow-xl); }
+
+/* Glass morphism */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+}
+
+.glass:hover {
+  background: var(--glass-bg-hover);
+}
+
+/* Transitions */
+.transition-fast { transition: all var(--transition-fast); }
+.transition-normal { transition: all var(--transition-normal); }
+.transition-slow { transition: all var(--transition-slow); }

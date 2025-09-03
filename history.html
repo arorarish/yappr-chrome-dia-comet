@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yappr - Transcription History</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="styles/base.css">
+    <style>
+        /* History page specific overrides */
+        body {
+            padding: var(--spacing-xl);
+        }
+        
+        .yappr-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* Logo header */
+        .logo-header {
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .page-logo {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+        
+        .controls {
+            display: flex;
+            gap: var(--spacing-md);
+            align-items: center;
+            justify-content: space-between;
+            min-height: 36px; /* Ensure consistent height */
+        }
+        
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .search-box .yappr-input {
+            height: 36px; /* Match button height */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-sm);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: center;
+        }
+        
+        .action-buttons .btn-secondary,
+        .action-buttons .btn-danger {
+            height: 36px; /* Match search bar height */
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: var(--font-size-sm);
+            min-width: auto;
+        }
+        
+        /* Select mode styling */
+        .select-toggle {
+            background: var(--primary-gradient);
+            border: 1px solid var(--accent);
+            height: 36px;
+            min-width: auto;
+        }
+        
+        .select-toggle.active {
+            background: var(--color-success);
+            border-color: var(--color-success);
+        }
+        
+        .bulk-actions {
+            display: none;
+            gap: var(--spacing-sm);
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: var(--spacing-lg);
+        }
+        
+        .bulk-actions.show {
+            display: flex;
+        }
+        
+        .bulk-actions .selection-info {
+            margin-right: auto;
+        }
+        
+        .selection-info {
+            font-size: var(--font-size-sm);
+            color: var(--color-text-secondary);
+            white-space: nowrap;
+        }
+        
+        /* Duplicate removed - already defined above */
+        
+        
+        .history-grid {
+            display: grid;
+            gap: var(--spacing-lg);
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        }
+        
+        .history-item {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border: 1px solid var(--color-outline);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .history-item:hover {
+            transform: translateY(-4px);
+            background-color: rgba(32,32,58,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Selection mode styling - proper flexbox layout */
+        .history-item.selection-mode {
+            cursor: pointer; /* Indicate the whole card is clickable */
+        }
+        
+        .history-item.selection-mode:hover {
+            transform: translateY(-4px);
+            background-color: rgba(32,32,58,0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .history-item.selected {
+            border-color: var(--accent);
+            background-color: rgba(169, 111, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(169, 111, 255, 0.3);
+        }
+        
+        /* Content wrapper for flex layout */
+        .item-content {
+            display: flex;
+            align-items: center; /* Center vertically */
+            gap: var(--spacing-sm);
+            width: 100%;
+            min-height: 100px; /* Ensure minimum height for proper centering */
+        }
+        
+        /* Main content area (everything except checkbox) */
+        .item-main {
+            flex: 1;
+            min-width: 0; /* Allows text to wrap/truncate properly */
+        }
+        
+        /* Custom checkbox styling - hidden native checkbox */
+        .history-item .selection-checkbox {
+            display: none;
+        }
+        
+        /* Custom checkbox container */
+        .checkbox-label {
+            display: inline-block;
+            cursor: pointer;
+            flex-shrink: 0;
+            flex-grow: 0;
+            pointer-events: none; /* Let card handle clicks */
+        }
+        
+        /* Custom checkbox appearance */
+        .custom-checkbox {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            min-width: 20px;
+            min-height: 20px;
+            border: 2px solid var(--color-outline);
+            border-radius: 50%; /* Perfect circle for Material Design */
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            box-sizing: border-box;
+        }
+        
+        /* Custom checkmark */
+        .custom-checkbox::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        /* Show checkmark when checked */
+        .history-item .selection-checkbox:checked + .checkbox-label .custom-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .history-item .selection-checkbox:checked + .checkbox-label .custom-checkbox::after {
+            opacity: 1;
+        }
+        
+        /* Prevent action buttons from triggering selection */
+        .history-item.selection-mode .item-actions {
+            position: relative;
+            z-index: 3;
+            pointer-events: auto;
+        }
+        
+        .history-item.selection-mode .action-btn {
+            pointer-events: auto;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .item-meta .date {
+            font-weight: bold;
+            color: var(--color-success);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .item-meta .stats {
+            font-size: var(--font-size-sm);
+            opacity: 0.7;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+        
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: var(--border-radius-sm);
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .action-btn:hover {
+            background-color: rgba(32,32,58,0.8);
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-btn .material-icons {
+            font-size: 16px;
+            pointer-events: none;
+        }
+        
+        .item-text {
+            line-height: 1.6;
+            font-size: var(--font-size-sm);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px var(--spacing-lg);
+            opacity: 0.7;
+        }
+        
+        .empty-state h3 {
+            font-size: var(--font-size-xl);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: var(--font-size-lg);
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background-color: rgba(26,26,47,0.75);
+            backdrop-filter: blur(var(--backdrop-blur));
+            background-image: var(--texture-overlay);
+            border-radius: var(--border-radius-lg);
+            padding: var(--spacing-xl);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.visible .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal h3 {
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-size-lg);
+        }
+        
+        .modal p {
+            margin-bottom: var(--spacing-lg);
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                text-align: center;
+                gap: var(--spacing-sm);
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+            
+            .action-buttons {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .bulk-actions {
+                justify-content: center;
+                width: 100%;
+            }
+            
+            .bulk-actions button {
+                font-size: var(--font-size-xs);
+                padding: var(--spacing-xs) var(--spacing-sm);
+            }
+            
+            .history-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="yappr-page">
+        <div class="yappr-container">
+            <!-- Logo Header -->
+            <div class="logo-header">
+                <img src="ref/yappr-logo-dark-mode-400px.png" alt="Yappr" class="page-logo" />
+            </div>
+            
+            
+            <!-- Navigation Menu -->
+            <nav class="nav-menu">
+                <a href="analytics.html" class="nav-item">
+                    <span class="material-icons">assessment</span>
+                    <span class="nav-item-text">Analytics</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="history.html" class="nav-item active">
+                    <span class="material-icons">history</span>
+                    <span class="nav-item-text">History</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="folders.html" class="nav-item">
+                    <span class="material-icons">folder</span>
+                    <span class="nav-item-text">Folders</span>
+                </a>
+                <div class="nav-divider"></div>
+                <a href="settings.html" class="nav-item">
+                    <span class="material-icons">settings</span>
+                    <span class="nav-item-text">Settings</span>
+                </a>
+            </nav>
+            
+
+            <div class="yappr-card controls">
+                <div class="search-box">
+                    <input type="text" id="searchBox" class="yappr-input" placeholder="Search transcriptions by text or date...">
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-primary select-toggle" id="selectBtn">
+                        <span class="material-icons">checklist</span>
+                        Select
+                    </button>
+                    <button class="btn-secondary" id="exportBtn">
+                        <span class="material-icons">download</span>
+                        Export All
+                    </button>
+                    <button class="btn-danger" id="clearBtn">
+                        <span class="material-icons">delete_sweep</span>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Bulk actions bar (separate card when in selection mode) -->
+            <div class="yappr-card bulk-actions" id="bulkActions">
+                <span class="selection-info" id="selectionInfo">0 selected</span>
+                <button class="btn-secondary" id="copySelectedBtn">
+                    <span class="material-icons">content_copy</span>
+                    Copy
+                </button>
+                <button class="btn-secondary" id="exportSelectedBtn">
+                    <span class="material-icons">download</span>
+                    Export
+                </button>
+                <button class="btn-secondary" id="assignFolderBtn">
+                    <span class="material-icons">folder</span>
+                    Assign
+                </button>
+                <button class="btn-danger" id="deleteSelectedBtn">
+                    <span class="material-icons">delete</span>
+                    Delete
+                </button>
+            </div>
+            
+            <!-- Add spacing between controls and grid -->
+            <div style="margin-bottom: var(--spacing-xl);"></div>
+
+
+            <div class="loading" id="loading">
+                Loading transcription history...
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <h3>No transcriptions found</h3>
+                <p>Start recording to see your transcriptions here!</p>
+            </div>
+
+            <div class="history-grid" id="historyGrid">
+                <!-- History items will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Confirm Action</h3>
+            <p id="modalBody">Are you sure you want to proceed?</p>
+            <div class="modal-buttons">
+                <button class="btn-secondary" id="modalCancel">Cancel</button>
+                <button class="btn-danger" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="history.js"></script>
+</body>
+</html>

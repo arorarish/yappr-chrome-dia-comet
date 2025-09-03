@@ -1,0 +1,61 @@
+{
+  "manifest_version": 3,
+  "name": "Yappr - Voice to Text",
+  "version": "2.0",
+  "description": "Advanced speech-to-text transcription using ElevenLabs STT with OpenAI AI enhancements and intelligent formatting",
+  "homepage_url": "https://yappr.pro",
+  "author": "Yappr Team",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "notifications",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Yappr - Voice to Text",
+    "default_icon": {
+      "16": "ref/icon16.png",
+      "48": "ref/icon48.png",
+      "128": "ref/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "commands": {
+    "toggle-recording": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+U",
+        "mac": "Command+Shift+U"
+      },
+      "description": "Toggle speech recording"
+    },
+    "toggle-recording-alt": {
+      "suggested_key": {
+        "default": "Alt+Period",
+        "mac": "Alt+Period"
+      },
+      "description": "Toggle speech recording (alternate)"
+    }
+  },
+  "options_page": "settings.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["recording-indicator.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
