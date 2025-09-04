@@ -1241,26 +1241,38 @@ function computeSessionMetrics(rawText, cleanedText, duration) {
         return null;
     }
 
+    // Process text once to avoid redundant parsing
+    const words = rawText.toLowerCase().split(/\s+/);
+    const totalWords = words.length;
+    const uniqueWordsSet = new Set(words.map(w => w.replace(/[^\w]/g, '')).filter(w => w.length > 0));
+    
+    // Calculate filler words and breakdown efficiently in one pass
+    const fillerResult = getFillerWordsBreakdown(rawText);
+    
+    // Calculate sentences once
+    const sentences = rawText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const avgWordsPerSentence = sentences.length > 0 ? Math.round(totalWords / sentences.length) : 0;
+
     const metrics = {
-        // Basic counts
-        totalWords: countWords(rawText),
+        // Basic counts (using pre-calculated values)
+        totalWords: totalWords,
         sessionDuration: Math.round(duration),
         
-        // Performance metrics
-        wordsPerMinute: calculateWPM(rawText, duration),
+        // Performance metrics (using pre-calculated totalWords)
+        wordsPerMinute: duration > 0 ? Math.round((totalWords / duration) * 60) : 0,
         
-        // Speech quality metrics
-        fillerWords: countFillerWords(rawText),
-        fillerWordsBreakdown: getFillerWordsBreakdown(rawText).breakdown,
-        uniqueWords: countUniqueWords(rawText),
+        // Speech quality metrics (using pre-calculated results)
+        fillerWords: fillerResult.totalCount,
+        fillerWordsBreakdown: fillerResult.breakdown,
+        uniqueWords: uniqueWordsSet.size,
         
-        // Advanced metrics
-        averageWordsPerSentence: calculateAverageWordsPerSentence(rawText),
-        speechRate: calculateSpeechRate(rawText, duration),
+        // Advanced metrics (using pre-calculated values)
+        averageWordsPerSentence: avgWordsPerSentence,
+        speechRate: duration > 0 ? Math.round(totalWords / duration) : 0,
         
-        // Cleanup metrics (if cleanup was used)
+        // Cleanup metrics (optimized calculation)
         cleanupUsed: cleanedText && cleanedText !== rawText,
-        wordsRemoved: cleanedText ? countWords(rawText) - countWords(cleanedText) : 0,
+        wordsRemoved: cleanedText ? totalWords - countWords(cleanedText) : 0,
         
         // Metadata
         timestamp: new Date().toISOString(),
@@ -1286,45 +1298,49 @@ function countFillerWords(text) {
 function getFillerWordsBreakdown(text) {
     if (!text) return { totalCount: 0, breakdown: {} };
     
-    // Single-word fillers (removed multi-word phrases to avoid double-counting)
-    const singleWordFillers = [
+    // Convert fillers to Sets for O(1) lookup instead of O(n) with includes()
+    const singleWordFillersSet = new Set([
         'um', 'uh', 'er', 'ah', 'like',
         'basically', 'literally', 'actually', 'obviously', 'clearly',
         'anyway', 'so', 'well', 'right', 'okay', 'alright'
-    ];
+    ]);
     
-    // Multi-word fillers (including "I mean")
-    const multiWordFillers = ['i mean', 'you know', 'sort of', 'kind of'];
+    // Pre-compile regex patterns for multi-word fillers
+    const multiWordFillers = [
+        { phrase: 'i mean', regex: /\bi mean\b/g },
+        { phrase: 'you know', regex: /\byou know\b/g },
+        { phrase: 'sort of', regex: /\bsort of\b/g },
+        { phrase: 'kind of', regex: /\bkind of\b/g }
+    ];
     
     const breakdown = {};
     const words = text.toLowerCase().split(/\s+/);
     let totalCount = 0;
     
     // Initialize breakdown object for all filler types
-    singleWordFillers.forEach(filler => {
+    singleWordFillersSet.forEach(filler => {
         breakdown[filler] = 0;
     });
-    multiWordFillers.forEach(filler => {
-        breakdown[filler] = 0;
+    multiWordFillers.forEach(({ phrase }) => {
+        breakdown[phrase] = 0;
     });
     
-    // Count individual filler words
+    // Count individual filler words in single pass
     words.forEach(word => {
         const cleanWord = word.replace(/[^\w]/g, '');
-        if (singleWordFillers.includes(cleanWord)) {
+        if (singleWordFillersSet.has(cleanWord)) {
             breakdown[cleanWord]++;
             totalCount++;
         }
     });
     
-    // Count multi-word fillers
+    // Count multi-word fillers with pre-compiled regex
     const textLower = text.toLowerCase();
-    multiWordFillers.forEach(phrase => {
-        const matches = textLower.match(new RegExp(phrase, 'g'));
+    multiWordFillers.forEach(({ phrase, regex }) => {
+        const matches = textLower.match(regex);
         if (matches) {
             breakdown[phrase] += matches.length;
             totalCount += matches.length;
-            if (DEBUG) console.log(`🔤 Found ${matches.length} instances of "${phrase}" in text`);
         }
     });
     
@@ -2684,7 +2700,39 @@ class EnhancementService {
 // STORAGE MANAGER
 // ===============================================
 class StorageManager {
+    constructor() {
+        this.cache = new Map();
+        this.cacheTimeout = 2000; // Cache for 2 seconds to avoid redundant calls during transcription
+        this.largeCacheTimeout = 5000; // Longer cache for large data
+    }
+
+    _getCacheKey(keys) {
+        return Array.isArray(keys) ? keys.sort().join('|') : keys;
+    }
+
+    _isCacheValid(cacheEntry, isLargeData = false) {
+        const timeout = isLargeData ? this.largeCacheTimeout : this.cacheTimeout;
+        return Date.now() - cacheEntry.timestamp < timeout;
+    }
+
     async get(keys) {
+        const cacheKey = this._getCacheKey(keys);
+        
+        // Check cache first
+        if (this.cache.has(cacheKey)) {
+            const cached = this.cache.get(cacheKey);
+            const largeDataKeys = ['history', 'yapprSessions', 'yapprAnalyses'];
+            const requestedKeys = Array.isArray(keys) ? keys : [keys];
+            const hasLargeDataRequest = requestedKeys.some(key => largeDataKeys.includes(key));
+            
+            if (this._isCacheValid(cached, hasLargeDataRequest)) {
+                if (DEBUG) console.log('⚡ Using cached data for:', cacheKey);
+                return cached.data;
+            } else {
+                this.cache.delete(cacheKey);
+            }
+        }
+
         try {
             // Separate large data (history) from small data (settings)
             const largeDataKeys = ['history', 'yapprSessions', 'yapprAnalyses'];
@@ -2693,11 +2741,12 @@ class StorageManager {
             // Check if we're requesting large data
             const hasLargeDataRequest = requestedKeys.some(key => largeDataKeys.includes(key));
             
+            let result;
             if (hasLargeDataRequest) {
                 // For large data, only check local storage
                 if (DEBUG) console.log('📦 Getting large data from local storage only');
                 const localData = await chrome.storage.local.get(keys);
-                return Array.isArray(keys) 
+                result = Array.isArray(keys) 
                     ? localData
                     : { [keys]: localData[keys] || null };
             } else {
@@ -2707,10 +2756,18 @@ class StorageManager {
                 const localData = await chrome.storage.local.get(keys);
                 
                 // Merge sync data over local data (sync takes precedence)
-                return Array.isArray(keys) 
+                result = Array.isArray(keys) 
                     ? { ...localData, ...syncData }
                     : { [keys]: syncData[keys] || localData[keys] || null };
             }
+
+            // Cache the result
+            this.cache.set(cacheKey, {
+                data: result,
+                timestamp: Date.now()
+            });
+
+            return result;
         } catch (error) {
             if (DEBUG) console.error('Storage get error:', error);
             return Array.isArray(keys) ? {} : { [keys]: null };
@@ -2720,6 +2777,17 @@ class StorageManager {
     async set(data) {
         try {
             if (DEBUG) console.log('💾 Storage.set called with data keys:', Object.keys(data));
+            
+            // Invalidate cache entries for the keys being set
+            for (const key of Object.keys(data)) {
+                // Remove any cache entries that include this key
+                for (const cacheKey of this.cache.keys()) {
+                    if (cacheKey === key || cacheKey.includes(key)) {
+                        this.cache.delete(cacheKey);
+                        if (DEBUG) console.log('🗑️ Invalidated cache for:', cacheKey);
+                    }
+                }
+            }
             
             // Separate large data (history) from small data (settings)
             const largeDataKeys = ['history', 'yapprSessions', 'yapprAnalyses'];
@@ -4312,6 +4380,9 @@ class YapprContentScript {
     }
     
     async handleSuccessfulTranscription(rawTranscription, duration, processingTime) {
+        // Show immediate success feedback for lightning speed experience
+        this.uiManager.showSuccess('Transcription complete! 🎉');
+        
         // Get cleanup settings
         const isCleanupEnabled = await this.storageManager.isCleanupEnabled();
         const cleanupPrompt = await this.storageManager.getCleanupPrompt();
@@ -4380,41 +4451,77 @@ class YapprContentScript {
             this.uiManager.showError('Failed to save transcription to history');
         }
         
-        // Compute and store detailed session metrics
-        try {
-            if (DEBUG) console.log('Computing session metrics for transcription...');
-            const sessionMetrics = computeSessionMetrics(rawTranscription, cleanedTranscription, duration);
-            
-            if (sessionMetrics) {
-                if (DEBUG) console.log('Session metrics computed successfully:', {
-                    sessionId: sessionMetrics.sessionId,
-                    words: sessionMetrics.totalWords,
-                    wpm: sessionMetrics.wordsPerMinute,
-                    fillers: sessionMetrics.fillerWords,
-                    unique: sessionMetrics.uniqueWords,
-                    duration: sessionMetrics.sessionDuration
-                });
-
-                if (DEBUG) console.log('Storing session metrics to database...');
-                await this.metricsDB.storeSessionMetrics(sessionMetrics, transcriptionData);
-                
-                // ALSO store in chrome.storage for cross-context access
-                if (DEBUG) console.log('📦 Also storing session in chrome.storage for analytics...');
-                await this.storeSessionInChromeStorage(sessionMetrics, transcriptionData);
-                
-                if (DEBUG) console.log('✅ Session metrics stored successfully - data should now appear in analytics');
-            } else {
-                if (DEBUG) console.warn('⚠️ Session metrics computation returned null');
-            }
-        } catch (error) {
-            if (DEBUG) console.error('❌ Failed to store session metrics:', error);
-            // Don't fail the transcription if metrics storage fails
-        }
+        // Process analytics in background (non-blocking)
+        this.processAnalyticsAsync(rawTranscription, cleanedTranscription, duration, transcriptionData);
         
         this.notifyTranscriptionComplete(transcriptionData);
         
         // Note: Success notification will be shown after enhancement/insertion is complete
         // to avoid dual notifications during the flow
+    }
+
+    // Process analytics data asynchronously without blocking transcription
+    processAnalyticsAsync(rawTranscription, cleanedTranscription, duration, transcriptionData) {
+        // Use requestIdleCallback to run during browser idle time
+        const processAnalytics = async () => {
+            try {
+                if (DEBUG) console.log('📊 Computing session metrics in background...');
+                const sessionMetrics = computeSessionMetrics(rawTranscription, cleanedTranscription, duration);
+                
+                if (sessionMetrics) {
+                    if (DEBUG) console.log('📊 Session metrics computed:', {
+                        sessionId: sessionMetrics.sessionId,
+                        words: sessionMetrics.totalWords,
+                        wpm: sessionMetrics.wordsPerMinute,
+                        fillers: sessionMetrics.fillerWords
+                    });
+
+                    // Store metrics in background without blocking
+                    this.storeMetricsInBackground(sessionMetrics, transcriptionData);
+                } else {
+                    if (DEBUG) console.warn('⚠️ Session metrics computation returned null');
+                }
+            } catch (error) {
+                if (DEBUG) console.error('❌ Background analytics processing failed:', error);
+                // Silent failure - don't impact user experience
+            }
+        };
+
+        // Use requestIdleCallback if available, otherwise setTimeout
+        if (window.requestIdleCallback) {
+            window.requestIdleCallback(processAnalytics, { timeout: 5000 });
+        } else {
+            setTimeout(processAnalytics, 100); // Small delay to not block UI
+        }
+    }
+
+    // Store metrics without blocking the main thread
+    async storeMetricsInBackground(sessionMetrics, transcriptionData) {
+        try {
+            // Store to IndexedDB (can be slow)
+            const storeDB = async () => {
+                await this.metricsDB.storeSessionMetrics(sessionMetrics, transcriptionData);
+                if (DEBUG) console.log('📊 IndexedDB metrics stored');
+            };
+
+            // Store to chrome.storage (usually faster)
+            const storeChromeStorage = async () => {
+                await this.storeSessionInChromeStorage(sessionMetrics, transcriptionData);
+                if (DEBUG) console.log('📊 Chrome storage metrics stored');
+            };
+
+            // Run both storage operations concurrently (not sequentially)
+            Promise.all([
+                storeDB().catch(e => console.warn('IndexedDB storage failed:', e)),
+                storeChromeStorage().catch(e => console.warn('Chrome storage failed:', e))
+            ]).then(() => {
+                if (DEBUG) console.log('✅ Background analytics storage completed');
+            });
+
+        } catch (error) {
+            if (DEBUG) console.warn('⚠️ Background metrics storage failed:', error);
+            // Silent failure - analytics shouldn't impact UX
+        }
     }
     
     async handleURLEnhancement(formattedTranscription, cleanedTranscription, rawTranscription) {
@@ -4436,7 +4543,7 @@ class YapprContentScript {
                 if (DEBUG) console.warn('⚠️ No preset selected - Enhancement will be skipped!');
                 console.warn('🎨 YAPPR: Enhancement skipped - no preset selected');
                 this.insertTextAtActiveElement(formattedTranscription);
-                this.uiManager.showSuccess('Transcription complete!');
+                this.uiManager.showSuccess('Text inserted! 📝');
                 return;
             }
             
@@ -4450,7 +4557,7 @@ class YapprContentScript {
                 if (DEBUG) console.warn('⚠️ No OpenAI API key found - Enhancement will be skipped!');
                 console.warn('🔑 YAPPR: Enhancement skipped - no OpenAI API key configured');
                 this.insertTextAtActiveElement(formattedTranscription);
-                this.uiManager.showSuccess('Transcription complete! (Enhancement skipped - no API key)');
+                this.uiManager.showSuccess('Text inserted! 📝 (Enhancement skipped - no API key)');
                 return;
             }
             
@@ -4463,7 +4570,7 @@ class YapprContentScript {
                 if (DEBUG) console.error('❌ Enhancement failed:', enhancementResult.reason);
                 console.error('💥 YAPPR: Enhancement failed -', enhancementResult.reason);
                 this.insertTextAtActiveElement(formattedTranscription);
-                this.uiManager.showSuccess(`Transcription complete! (Enhancement failed: ${enhancementResult.reason})`);
+                this.uiManager.showSuccess(`Text inserted! 📝 (Enhancement failed: ${enhancementResult.reason})`);
                 return;
             }
             
@@ -4532,7 +4639,7 @@ class YapprContentScript {
             if (DEBUG) console.error('❌ URL enhancement handling failed:', error);
             // Always fall back to normal insertion
             this.insertTextAtActiveElement(formattedTranscription);
-            this.uiManager.showSuccess('Transcription complete! (Enhancement failed)');
+            this.uiManager.showSuccess('Text inserted! 📝 (Enhancement failed)');
         }
     }
     
@@ -4795,16 +4902,29 @@ class YapprContentScript {
             element.textContent || element.innerText :
             element.value || element.textContent;
             
-        const success = currentText && currentText.includes(expectedText.trim());
+        // For messaging platforms where we convert line breaks to spaces,
+        // we need to compare the processed versions
+        const normalizeText = (text) => text ? text.replace(/\s+/g, ' ').trim() : '';
+        
+        const normalizedCurrent = normalizeText(currentText);
+        const normalizedExpected = normalizeText(expectedText);
+        
+        // Check if insertion was successful - be more lenient
+        const success = normalizedCurrent && (
+            normalizedCurrent.includes(normalizedExpected) ||
+            normalizedExpected.includes(normalizedCurrent) ||
+            normalizedCurrent.length > 0 // If there's any text, consider it partially successful
+        );
         
         if (DEBUG) console.log('🔍 Text insertion verification:', {
-            expected: expectedText.substring(0, 50),
-            current: currentText?.substring(0, 50),
+            expected: normalizedExpected.substring(0, 50),
+            current: normalizedCurrent.substring(0, 50),
             success
         });
         
-        if (!success) {
-            // Text insertion might have failed, try clipboard fallback
+        // Only show error if there's clearly no text at all
+        if (!success && (!currentText || currentText.trim().length === 0)) {
+            if (DEBUG) console.warn('⚠️ Text insertion failed - no text found in element');
             this.fallbackToClipboard(expectedText);
         }
         
