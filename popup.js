@@ -64,43 +64,9 @@ function validateApiKeyFormat(apiKey, service) {
     }
 }
 
+// showToast function is now provided by shared/notifications.js
 function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    
-    // Create icon based on type
-    const icon = document.createElement('span');
-    icon.className = 'material-icons toast-icon';
-    switch (type) {
-        case 'error':
-            icon.textContent = 'error';
-            break;
-        case 'warning':
-            icon.textContent = 'warning';
-            break;
-        case 'info':
-            icon.textContent = 'info';
-            break;
-        default:
-            icon.textContent = 'check_circle';
-    }
-    
-    const messageSpan = document.createElement('span');
-    messageSpan.textContent = message;
-    
-    toast.appendChild(icon);
-    toast.appendChild(messageSpan);
-    
-    document.body.appendChild(toast);
-    
-    // Animate in
-    setTimeout(() => toast.classList.add('toast-show'), 100);
-    
-    // Animate out and remove
-    setTimeout(() => {
-        toast.classList.remove('toast-show');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    return window.NotificationManager.show(message, type);
 }
 
 function copyToClipboard(text) {

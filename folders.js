@@ -52,40 +52,7 @@ function copyToClipboard(text) {
         .catch(() => false);
 }
 
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'error' ? '#ef4444' : '#22c55e'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10000;
-        opacity: 0;
-        transform: translateX(100px);
-        transition: all 0.3s ease;
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Animate in
-    setTimeout(() => {
-        toast.style.opacity = '1';
-        toast.style.transform = 'translateX(0)';
-    }, 100);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100px)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+// showToast function is now provided by shared/notifications.js
 
 function downloadTextFile(content, filename) {
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });

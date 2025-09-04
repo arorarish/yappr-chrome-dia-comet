@@ -351,22 +351,8 @@ class WhisperHistoryPage {
     }
 
     showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: ${type === 'success' ? '#4CAF50' : '#FFC107'}; color: white;
-            padding: 12px 20px; border-radius: 8px; z-index: 1001;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            opacity: 0; animation: toast-fade-in-out 3s ease;
-        `;
-        toast.textContent = message;
-
-        const style = document.createElement('style');
-        style.innerHTML = `@keyframes toast-fade-in-out { 0%, 100% { opacity: 0; transform: translate(-50%, 10px); } 10%, 90% { opacity: 1; transform: translate(-50%, 0); } }`;
-        document.body.appendChild(style);
-        
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        // Use shared notification system
+        window.NotificationManager.show(message, type);
     }
 
     // --- Selection Mode Functions ---

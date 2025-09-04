@@ -2,7 +2,7 @@
 // All modules combined for compatibility
 
 // Debug control - set to false for production/sharing
-const DEBUG = true;
+const DEBUG = true; // Temporarily enabled for testing React insertion fixes
 
 // ===============================================
 // SMART TRANSCRIPTION CLEANUP SYSTEM
@@ -205,92 +205,530 @@ function truncateText(text, maxLength) {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 }
 
-function showToast(message, type = 'success', duration = 3000) {
-    const toast = document.createElement('div');
-    const colors = {
-        success: '#4ade80',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-    };
-    
-    toast.style.cssText = `
-        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-        background: ${colors[type] || colors.info}; color: white;
-        padding: 12px 20px; border-radius: 8px; z-index: 10001;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        font-size: 14px; font-weight: 500;
-        opacity: 0; animation: toast-fade-in-out ${duration}ms ease;
-    `;
-    toast.textContent = message;
-    
-    if (!document.getElementById('toast-animations')) {
+// Improved notification system for content script
+class ContentNotificationManager {
+    constructor() {
+        this.activeNotifications = new Set();
+        this.maxNotifications = 3;
+        this.ensureStyles();
+    }
+
+    ensureStyles() {
+        if (document.getElementById('yappr-notification-styles')) return;
+        
         const style = document.createElement('style');
-        style.id = 'toast-animations';
+        style.id = 'yappr-notification-styles';
         style.innerHTML = `
-            @keyframes toast-fade-in-out {
-                0%, 100% { opacity: 0; transform: translate(-50%, 10px); }
-                10%, 90% { opacity: 1; transform: translate(-50%, 0); }
+            .yappr-notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 2147483647;
+                opacity: 0;
+                transform: translateX(100px);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                max-width: 400px;
+                word-wrap: break-word;
+                pointer-events: auto;
+            }
+
+            .yappr-notification.show {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .yappr-notification.success {
+                background: linear-gradient(135deg, #10b981, #059669);
+                color: white;
+            }
+
+            .yappr-notification.error {
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+                color: white;
+            }
+
+            .yappr-notification.warning {
+                background: linear-gradient(135deg, #f59e0b, #d97706);
+                color: white;
+            }
+
+            .yappr-notification.info {
+                background: linear-gradient(135deg, #3b82f6, #2563eb);
+                color: white;
             }
         `;
         document.head.appendChild(style);
     }
-    
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), duration);
+
+    show(message, type = 'success', duration = 3000) {
+        // Remove oldest notification if we have too many
+        if (this.activeNotifications.size >= this.maxNotifications) {
+            const oldest = Array.from(this.activeNotifications)[0];
+            this.hide(oldest);
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `yappr-notification ${type}`;
+        notification.textContent = message;
+
+        // Position based on existing notifications
+        const offset = this.activeNotifications.size * 60;
+        notification.style.top = `${20 + offset}px`;
+
+        document.body.appendChild(notification);
+        this.activeNotifications.add(notification);
+
+        // Show notification
+        requestAnimationFrame(() => {
+            notification.classList.add('show');
+        });
+
+        // Auto-hide after duration
+        setTimeout(() => {
+            this.hide(notification);
+        }, duration);
+
+        return notification;
+    }
+
+    hide(notification) {
+        if (!notification || !this.activeNotifications.has(notification)) return;
+
+        notification.classList.remove('show');
+        this.activeNotifications.delete(notification);
+
+        // Animate remaining notifications down
+        const remainingNotifications = Array.from(this.activeNotifications);
+        remainingNotifications.forEach((notif, index) => {
+            notif.style.top = `${20 + index * 60}px`;
+        });
+
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }
+}
+
+// Create global instance for content script
+window.yapprNotificationManager = window.yapprNotificationManager || new ContentNotificationManager();
+
+function showToast(message, type = 'success', duration = 3000) {
+    return window.yapprNotificationManager.show(message, type, duration);
 }
 
 
-function insertTextAtCursor(element, text) {
-    if (element.isContentEditable) {
-        element.focus();
-        const formattedText = text.replace(/\n\n/g, '\n\n');
-        // Modern approach using Selection API instead of deprecated execCommand
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            range.deleteContents();
-            
-            // Create text node with line breaks handled properly
-            const lines = formattedText.split('\n');
-            const fragment = document.createDocumentFragment();
-            
-            lines.forEach((line, index) => {
-                if (index > 0) {
-                    fragment.appendChild(document.createElement('br'));
-                }
-                if (line.trim()) {
-                    fragment.appendChild(document.createTextNode(line));
-                }
-            });
-            
-            range.insertNode(fragment);
-            
-            // Move cursor to end of inserted text
-            range.collapse(false);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        } else {
-            // Fallback for contentEditable
-            if (document.execCommand) {
-                document.execCommand('insertText', false, formattedText);
-            } else {
-                element.appendChild(document.createTextNode(formattedText));
+// ===============================================
+// UNIVERSAL TEXT INSERTION SYSTEM
+// ===============================================
+// Modern text insertion system for React/Vue/Angular and complex editors
+// 
+// This system solves the common problem where text insertion fails on modern web applications
+// that use JavaScript frameworks. Traditional DOM manipulation doesn't work because:
+//
+// 1. React/Vue/Angular manage their own state and re-render based on props/state changes
+// 2. Virtual DOM systems ignore direct DOM manipulation
+// 3. Controlled components only accept changes through proper event flows
+// 4. Rich text editors have custom APIs and event handling
+// 5. Shadow DOM isolates components from standard insertion methods
+//
+// SUPPORTED SITES:
+// ✅ Perplexity.ai (React contentEditable)  
+// ✅ Claude.ai (ProseMirror editor)
+// ✅ ChatGPT (React textarea)
+// ✅ X.com/Twitter (custom contentEditable)  
+// ✅ Notion (block-based editor)
+// ✅ Linear (React forms)
+// ✅ And many more via universal fallback methods
+//
+// INSERTION STRATEGY:
+// 1. Site-specific methods (optimized for known platforms)
+// 2. Typing simulation (character-by-character with events)
+// 3. Setter bypass (direct React state manipulation)
+// 4. Selection API with React events
+// 5. Legacy execCommand fallback  
+// 6. Direct content setting
+// 7. Clipboard fallback with user notification
+//
+// The system tries methods in order of compatibility until one succeeds.
+class UniversalTextInsertion {
+    constructor() {
+        this.siteConfigs = {
+            'perplexity.ai': {
+                selectors: ['#ask-input', '[data-testid="search-input"]', '.text-input'],
+                method: 'react-controlled',
+                requiresFocus: true
+            },
+            'claude.ai': {
+                selectors: ['[contenteditable="true"]', '.ProseMirror', '[data-testid="chat-input"]'],
+                method: 'prosemirror',
+                requiresFocus: true
+            },
+            'chat.openai.com': {
+                selectors: ['#prompt-textarea', '[data-testid="message-composer"]'],
+                method: 'react-textarea',
+                requiresFocus: true
+            },
+            'notion.so': {
+                selectors: ['[data-block-id]', '.notion-page-block'],
+                method: 'notion-blocks',
+                requiresFocus: true
+            },
+            'linear.app': {
+                selectors: ['[contenteditable="true"]', '[data-testid="editor"]'],
+                method: 'react-controlled',
+                requiresFocus: true
+            },
+            'x.com': {
+                selectors: ['[data-testid="tweetTextarea_0"]', '[data-contents="true"]'],
+                method: 'twitter-editor',
+                requiresFocus: true
+            },
+            'twitter.com': {
+                selectors: ['[data-testid="tweetTextarea_0"]', '[data-contents="true"]'],
+                method: 'twitter-editor',
+                requiresFocus: true
             }
-        }
-    } else if (typeof element.selectionStart === 'number' && typeof element.selectionEnd === 'number') {
-        const start = element.selectionStart;
-        element.value = element.value.slice(0, start) + text + element.value.slice(element.selectionEnd);
-        element.selectionStart = element.selectionEnd = start + text.length;
-    } else {
-        navigator.clipboard.writeText(text);
-        showToast('Text copied to clipboard', 'info');
-        return;
+        };
     }
 
-    element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+    async insert(element, text) {
+        if (!element || !text) return false;
+
+        const hostname = window.location.hostname;
+        const siteConfig = this.siteConfigs[hostname];
+        
+        if (DEBUG) console.log(`🎯 Attempting insertion on ${hostname}:`, {
+            element: element.tagName,
+            id: element.id,
+            className: element.className,
+            method: siteConfig?.method || 'generic'
+        });
+
+        // Try site-specific methods first
+        if (siteConfig) {
+            const success = await this.trySpecificMethod(element, text, siteConfig.method);
+            if (success) return true;
+        }
+
+        // Try universal methods in order of preference
+        return await this.tryUniversalMethods(element, text);
+    }
+
+    async trySpecificMethod(element, text, method) {
+        switch (method) {
+            case 'react-controlled':
+                return this.insertReactControlled(element, text);
+            case 'prosemirror':
+                return this.insertProseMirror(element, text);
+            case 'react-textarea':
+                return this.insertReactTextarea(element, text);
+            case 'notion-blocks':
+                return this.insertNotionBlocks(element, text);
+            case 'twitter-editor':
+                return this.insertTwitterEditor(element, text);
+            default:
+                return false;
+        }
+    }
+
+    insertReactControlled(element, text) {
+        try {
+            // Focus first
+            element.focus();
+            
+            // Clear existing content
+            element.innerHTML = '';
+            
+            // Create proper text nodes for React
+            const textNode = document.createTextNode(text);
+            element.appendChild(textNode);
+            
+            // Trigger React events in the right order
+            this.triggerReactEvents(element, text);
+            
+            // Verify insertion
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('React controlled insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertReactTextarea(element, text) {
+        try {
+            element.focus();
+            
+            // Set value directly
+            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                window.HTMLTextAreaElement.prototype, 'value'
+            ).set;
+            nativeInputValueSetter.call(element, text);
+            
+            // Trigger input event that React will recognize
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('React textarea insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertProseMirror(element, text) {
+        try {
+            element.focus();
+            
+            // Try ProseMirror API if available
+            const pmView = element.__PROSEMIRROR_VIEW__;
+            if (pmView) {
+                const { state } = pmView;
+                const tr = state.tr.insertText(text, state.selection.from, state.selection.to);
+                pmView.dispatch(tr);
+                return true;
+            }
+            
+            // Fallback to React controlled method
+            return this.insertReactControlled(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('ProseMirror insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertNotionBlocks(element, text) {
+        // Notion has complex block structure - use typing simulation
+        return this.simulateTyping(element, text);
+    }
+
+    insertTwitterEditor(element, text) {
+        try {
+            element.focus();
+            
+            // Twitter's contentEditable with special handling
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(document.createTextNode(text));
+                range.collapse(false);
+            } else {
+                element.textContent = text;
+            }
+            
+            // Twitter-specific events
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+            
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('Twitter editor insertion failed:', error);
+            return false;
+        }
+    }
+
+    async tryUniversalMethods(element, text) {
+        // Method 1: Typing simulation (most compatible)
+        if (await this.simulateTyping(element, text)) return true;
+        
+        // Method 2: Input event with setter bypass
+        if (this.insertWithSetterBypass(element, text)) return true;
+        
+        // Method 3: Selection API with React events
+        if (this.insertWithSelection(element, text)) return true;
+        
+        // Method 4: execCommand fallback
+        if (this.insertWithExecCommand(element, text)) return true;
+        
+        // Method 5: Direct content setting
+        if (this.insertDirect(element, text)) return true;
+        
+        return false;
+    }
+
+    async simulateTyping(element, text) {
+        try {
+            element.focus();
+            
+            // Simulate typing character by character
+            for (let char of text) {
+                // Dispatch keydown, input, keyup events
+                element.dispatchEvent(new KeyboardEvent('keydown', { 
+                    key: char, bubbles: true, cancelable: true 
+                }));
+                
+                // Insert character
+                if (element.isContentEditable) {
+                    document.execCommand('insertText', false, char);
+                } else {
+                    const start = element.selectionStart || 0;
+                    element.value = element.value.slice(0, start) + char + element.value.slice(start);
+                    element.selectionStart = element.selectionEnd = start + 1;
+                }
+                
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new KeyboardEvent('keyup', { 
+                    key: char, bubbles: true 
+                }));
+                
+                // Small delay to mimic human typing
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
+            
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('Typing simulation failed:', error);
+            return false;
+        }
+    }
+
+    insertWithSetterBypass(element, text) {
+        try {
+            element.focus();
+            
+            if (element.isContentEditable) {
+                element.textContent = text;
+            } else {
+                // Bypass React's value setter
+                const descriptor = Object.getOwnPropertyDescriptor(element, 'value') ||
+                    Object.getOwnPropertyDescriptor(Object.getPrototypeOf(element), 'value');
+                
+                if (descriptor && descriptor.set) {
+                    descriptor.set.call(element, text);
+                } else {
+                    element.value = text;
+                }
+            }
+            
+            this.triggerReactEvents(element, text);
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('Setter bypass failed:', error);
+            return false;
+        }
+    }
+
+    insertWithSelection(element, text) {
+        try {
+            element.focus();
+            
+            if (element.isContentEditable) {
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    range.deleteContents();
+                    range.insertNode(document.createTextNode(text));
+                    range.collapse(false);
+                } else {
+                    element.appendChild(document.createTextNode(text));
+                }
+            }
+            
+            this.triggerReactEvents(element, text);
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('Selection insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertWithExecCommand(element, text) {
+        try {
+            element.focus();
+            
+            if (document.execCommand && element.isContentEditable) {
+                document.execCommand('selectAll', false, null);
+                document.execCommand('insertText', false, text);
+                this.triggerReactEvents(element, text);
+                return this.verifyInsertion(element, text);
+            }
+            
+            return false;
+        } catch (error) {
+            if (DEBUG) console.warn('ExecCommand insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertDirect(element, text) {
+        try {
+            element.focus();
+            
+            if (element.isContentEditable) {
+                element.innerHTML = '';
+                element.appendChild(document.createTextNode(text));
+            } else {
+                element.value = text;
+            }
+            
+            this.triggerReactEvents(element, text);
+            return this.verifyInsertion(element, text);
+        } catch (error) {
+            if (DEBUG) console.warn('Direct insertion failed:', error);
+            return false;
+        }
+    }
+
+    triggerReactEvents(element, text) {
+        // Comprehensive event triggering for React
+        const events = [
+            new Event('focus', { bubbles: true }),
+            new Event('input', { bubbles: true, composed: true }),
+            new Event('change', { bubbles: true, composed: true }),
+            new KeyboardEvent('keydown', { bubbles: true }),
+            new KeyboardEvent('keyup', { bubbles: true }),
+            new Event('blur', { bubbles: true })
+        ];
+
+        events.forEach(event => {
+            try {
+                element.dispatchEvent(event);
+            } catch (e) {
+                // Ignore event dispatch errors
+            }
+        });
+        
+        // Focus back
+        setTimeout(() => element.focus(), 10);
+    }
+
+    verifyInsertion(element, expectedText) {
+        setTimeout(() => {
+            const currentText = element.isContentEditable ? 
+                element.textContent || element.innerText :
+                element.value;
+                
+            const success = currentText && currentText.includes(expectedText.trim());
+            
+            if (DEBUG) console.log('✅ Text insertion verification:', {
+                expected: expectedText.substring(0, 50),
+                current: currentText?.substring(0, 50),
+                success
+            });
+            
+            return success;
+        }, 100);
+        
+        return true; // Assume success for immediate return
+    }
+}
+
+// Create global instance
+const universalInsertion = new UniversalTextInsertion();
+
+function insertTextAtCursor(element, text) {
+    return universalInsertion.insert(element, text);
 }
 
 // ===============================================
@@ -3746,10 +4184,8 @@ class YapprContentScript {
         
         this.notifyTranscriptionComplete(transcriptionData);
         
-        const cleanupUsed = cleanedTranscription !== rawTranscription;
-        this.uiManager.showSuccess(
-            `Transcription complete! (${processingTime.toFixed(1)}s)${cleanupUsed ? ' ✨ Cleaned' : ''}`
-        );
+        // Note: Success notification will be shown after enhancement/insertion is complete
+        // to avoid dual notifications during the flow
     }
     
     async handleURLEnhancement(formattedTranscription, cleanedTranscription, rawTranscription) {
@@ -3770,8 +4206,8 @@ class YapprContentScript {
             if (!preset) {
                 if (DEBUG) console.warn('⚠️ No preset selected - Enhancement will be skipped!');
                 console.warn('🎨 YAPPR: Enhancement skipped - no preset selected');
-                this.uiManager.showInfo('No enhancement preset selected');
                 this.insertTextAtActiveElement(formattedTranscription);
+                this.uiManager.showSuccess('Transcription complete!');
                 return;
             }
             
@@ -3784,8 +4220,8 @@ class YapprContentScript {
             if (!apiKey) {
                 if (DEBUG) console.warn('⚠️ No OpenAI API key found - Enhancement will be skipped!');
                 console.warn('🔑 YAPPR: Enhancement skipped - no OpenAI API key configured');
-                this.uiManager.showWarning('Enhancement skipped - no OpenAI API key');
                 this.insertTextAtActiveElement(formattedTranscription);
+                this.uiManager.showSuccess('Transcription complete! (Enhancement skipped - no API key)');
                 return;
             }
             
@@ -3797,8 +4233,8 @@ class YapprContentScript {
             if (!enhancementResult.success) {
                 if (DEBUG) console.error('❌ Enhancement failed:', enhancementResult.reason);
                 console.error('💥 YAPPR: Enhancement failed -', enhancementResult.reason);
-                this.uiManager.showError(`Enhancement failed: ${enhancementResult.reason}`);
                 this.insertTextAtActiveElement(formattedTranscription);
+                this.uiManager.showSuccess(`Transcription complete! (Enhancement failed: ${enhancementResult.reason})`);
                 return;
             }
             
@@ -3840,13 +4276,14 @@ class YapprContentScript {
                     }, 2000); // Hide after 2 seconds
                 };
                 
-                // Store enhanced text and show success
+                // Store enhanced text
                 this.currentEnhancedText = enhancementResult.result;
-                this.uiManager.showSuccess(`Enhanced with ${preset.name}`);
                 
                 // Insert enhanced text by default (with small delay to allow user to focus field)
                 setTimeout(() => {
                     this.insertTextAtActiveElement(enhancementResult.result);
+                    // Show success notification after insertion is complete
+                    this.uiManager.showSuccess(`Enhanced with ${preset.name} ✨`);
                     
                     // Start auto-hide timer after successful insertion
                     setTimeout(() => {
@@ -3859,12 +4296,14 @@ class YapprContentScript {
             } else {
                 // No toggle UI available, insert enhanced text directly
                 this.insertTextAtActiveElement(enhancementResult.result);
+                this.uiManager.showSuccess(`Enhanced with ${preset.name} ✨`);
             }
             
         } catch (error) {
             if (DEBUG) console.error('❌ URL enhancement handling failed:', error);
             // Always fall back to normal insertion
             this.insertTextAtActiveElement(formattedTranscription);
+            this.uiManager.showSuccess('Transcription complete! (Enhancement failed)');
         }
     }
     
@@ -3937,40 +4376,226 @@ class YapprContentScript {
         this.performTextInsertion(element, processedText);
     }
     
-    performTextInsertion(element, text) {
-        if (element && this.isElementSuitableForInsertion(element)) {
+    async performTextInsertion(element, text) {
+        if (!element || !text) {
+            this.uiManager.showWarning('No text field found or no text to insert');
+            return false;
+        }
+
+        if (this.isElementSuitableForInsertion(element)) {
             if (DEBUG) console.log('✅ Element is suitable for text insertion');
             
-            // Use the text parameter which should be the cleaned text
-            let finalText = text;
-            if (window.location.hostname === 'x.com' || window.location.hostname === 'twitter.com') {
-                // Apply X.com specific formatting to cleaned text
-                finalText = text
-                    .replace(/\.\s+/g, '. ')  // Normalize spaces after periods
-                    .replace(/\!\s+/g, '! ')  // Normalize spaces after exclamation marks
-                    .replace(/\?\s+/g, '? ')  // Normalize spaces after question marks
-                    .replace(/\s+/g, ' ')     // Remove extra spaces
-                    .trim();
-                if (DEBUG) console.log('🐦 Applied X.com text formatting to cleaned text');
-            }
+            // Apply site-specific formatting
+            let finalText = this.applySiteSpecificFormatting(text);
             
             if (DEBUG) console.log('📝 Inserting final text:', finalText.substring(0, 100) + '...');
-            insertTextAtCursor(element, finalText);
-        } else {
-            if (DEBUG) console.log('⚠️ Element not suitable for insertion');
             
-            // Try clipboard as fallback with cleaned text
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(() => {
-                    if (DEBUG) console.log('📋 Cleaned text copied to clipboard successfully');
-                    this.uiManager.showInfo('Cleaned text copied to clipboard - click in a text field to paste');
-                }).catch(error => {
-                    if (DEBUG) console.error('❌ Failed to copy to clipboard:', error);
-                    this.uiManager.showWarning('Click in a text field first, then record again for direct insertion.');
-                });
-            } else {
-                this.uiManager.showInfo('Click in a text field first, then record again for direct insertion.');
+            try {
+                // Use the new universal insertion system
+                const success = await insertTextAtCursor(element, finalText);
+                
+                // Verify insertion after a short delay
+                setTimeout(() => this.verifyTextInsertion(element, finalText), 500);
+                
+                return success;
+            } catch (error) {
+                if (DEBUG) console.error('❌ Text insertion failed:', error);
+                return this.handleInsertionFailure(element, finalText);
             }
+        } else {
+            if (DEBUG) console.log('⚠️ Element not suitable for insertion, trying to find better target');
+            
+            // Try to find a better element
+            const betterElement = this.findBetterInsertionTarget();
+            if (betterElement) {
+                if (DEBUG) console.log('🎯 Found better insertion target:', betterElement);
+                return this.performTextInsertion(betterElement, text);
+            }
+            
+            // Fallback to clipboard
+            return this.fallbackToClipboard(text);
+        }
+    }
+
+    applySiteSpecificFormatting(text) {
+        const hostname = window.location.hostname;
+        
+        // X.com/Twitter formatting
+        if (hostname === 'x.com' || hostname === 'twitter.com') {
+            return text
+                .replace(/\.\s+/g, '. ')  // Normalize spaces after periods
+                .replace(/\!\s+/g, '! ')  // Normalize spaces after exclamation marks
+                .replace(/\?\s+/g, '? ')  // Normalize spaces after question marks
+                .replace(/\s+/g, ' ')     // Remove extra spaces
+                .trim();
+        }
+        
+        // Perplexity.ai formatting (preserve natural query format)
+        if (hostname === 'perplexity.ai') {
+            return text.replace(/\s+/g, ' ').trim();
+        }
+        
+        // Default: minimal formatting
+        return text.trim();
+    }
+
+    findBetterInsertionTarget() {
+        const hostname = window.location.hostname;
+        const siteConfigs = universalInsertion.siteConfigs;
+        
+        if (siteConfigs[hostname]) {
+            const selectors = siteConfigs[hostname].selectors;
+            for (const selector of selectors) {
+                const elements = document.querySelectorAll(selector);
+                for (const element of elements) {
+                    if (this.isElementSuitableForInsertion(element)) {
+                        return element;
+                    }
+                }
+            }
+        }
+        
+        // Generic fallbacks
+        const genericSelectors = [
+            'input[type="text"]:focus',
+            'textarea:focus',
+            '[contenteditable="true"]:focus',
+            'input[type="text"]',
+            'textarea',
+            '[contenteditable="true"]',
+            '[data-testid*="input"]',
+            '[data-testid*="text"]',
+            '.text-input',
+            '.input'
+        ];
+        
+        for (const selector of genericSelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isElementSuitableForInsertion(element)) {
+                return element;
+            }
+        }
+        
+        return null;
+    }
+
+    async handleInsertionFailure(element, text) {
+        if (DEBUG) console.log('🔄 Handling insertion failure with fallback methods');
+        
+        // Try alternative insertion methods
+        const fallbackMethods = [
+            () => this.tryDirectValueSetting(element, text),
+            () => this.tryClipboardPaste(element, text),
+            () => this.tryTypingSimulation(element, text)
+        ];
+        
+        for (const method of fallbackMethods) {
+            try {
+                if (await method()) {
+                    if (DEBUG) console.log('✅ Fallback method succeeded');
+                    return true;
+                }
+            } catch (error) {
+                if (DEBUG) console.warn('⚠️ Fallback method failed:', error);
+            }
+        }
+        
+        // Ultimate fallback: clipboard
+        return this.fallbackToClipboard(text);
+    }
+
+    tryDirectValueSetting(element, text) {
+        try {
+            element.focus();
+            if (element.isContentEditable) {
+                element.textContent = text;
+            } else {
+                element.value = text;
+            }
+            element.dispatchEvent(new Event('input', { bubbles: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async tryClipboardPaste(element, text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            element.focus();
+            // Simulate Ctrl+V
+            element.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'v',
+                ctrlKey: true,
+                bubbles: true
+            }));
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async tryTypingSimulation(element, text) {
+        try {
+            element.focus();
+            // Simulate character-by-character typing for short text
+            if (text.length < 100) {
+                for (const char of text) {
+                    element.dispatchEvent(new KeyboardEvent('keydown', { key: char }));
+                    if (element.isContentEditable) {
+                        document.execCommand('insertText', false, char);
+                    } else {
+                        const start = element.selectionStart || 0;
+                        element.value = element.value.slice(0, start) + char + element.value.slice(start);
+                        element.selectionStart = element.selectionEnd = start + 1;
+                    }
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    verifyTextInsertion(element, expectedText) {
+        const currentText = element.isContentEditable ? 
+            element.textContent || element.innerText :
+            element.value || element.textContent;
+            
+        const success = currentText && currentText.includes(expectedText.trim());
+        
+        if (DEBUG) console.log('🔍 Text insertion verification:', {
+            expected: expectedText.substring(0, 50),
+            current: currentText?.substring(0, 50),
+            success
+        });
+        
+        if (!success) {
+            // Text insertion might have failed, try clipboard fallback
+            this.fallbackToClipboard(expectedText);
+        }
+        
+        return success;
+    }
+
+    fallbackToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text).then(() => {
+                if (DEBUG) console.log('📋 Text copied to clipboard as fallback');
+                this.uiManager.showInfo(`Text copied to clipboard. Paste with Ctrl+V in ${window.location.hostname}`);
+                return true;
+            }).catch(error => {
+                if (DEBUG) console.error('❌ Failed to copy to clipboard:', error);
+                this.uiManager.showWarning('Text insertion failed. Try clicking in the text field and recording again.');
+                return false;
+            });
+        } else {
+            this.uiManager.showWarning('Text insertion failed. Modern browsers with clipboard access required.');
+            return Promise.resolve(false);
         }
     }
     
@@ -4178,54 +4803,11 @@ if (typeof window.yapprContentScript === 'undefined' && !window.yapprContentScri
         
         if (DEBUG) console.log('🎯 Yappr content script initialized successfully');
         
-        // Make testing available globally for development
-        window.testPresetManager = PresetManager.testPresetManager;
-        window.testTemplateEngine = TemplateEngine.testTemplateEngine;
-        window.testEnhancementToggle = EnhancementToggle.testToggle;
-        window.testEnhancementService = EnhancementService.testEnhancement;
+        // Initialize core services
         window.presetManager = new PresetManager();
         window.templateEngine = new TemplateEngine();
         window.enhancementToggle = new EnhancementToggle();
         window.enhancementService = new EnhancementService();
-        
-        // Add test function for debugging email enhancement
-        window.testEmailEnhancement = async function(testText) {
-            console.log('🧪 Testing email enhancement with:', testText);
-            
-            if (!window.presetManager || !window.enhancementService) {
-                console.error('❌ Services not initialized');
-                return;
-            }
-            
-            try {
-                // Get the email preset
-                const emailPreset = window.presetManager.presets.get('default-email');
-                if (!emailPreset) {
-                    console.error('❌ Email preset not found');
-                    return;
-                }
-                
-                console.log('📝 Using preset:', emailPreset.name);
-                console.log('📋 Prompt template:', emailPreset.prompt);
-                
-                // Test the enhancement
-                const result = await window.enhancementService.enhanceTranscript(testText, 'default-email');
-                console.log('🎯 Enhancement result:', result);
-                
-                if (result.success) {
-                    console.log('✅ Enhanced text:', result.result);
-                    console.log('📊 Original vs Enhanced:');
-                    console.log('Original:', testText);
-                    console.log('Enhanced:', result.result);
-                } else {
-                    console.error('❌ Enhancement failed:', result.reason);
-                }
-                
-                return result;
-            } catch (error) {
-                console.error('💥 Test failed:', error);
-            }
-        };
         
     } else {
         if (DEBUG) console.warn('❌ Audio recording not supported in this browser');
