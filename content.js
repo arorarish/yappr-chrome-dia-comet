@@ -344,10 +344,16 @@ function showToast(message, type = 'success', duration = 3000) {
 // SUPPORTED SITES:
 // ✅ Perplexity.ai (React contentEditable)  
 // ✅ Claude.ai (ProseMirror editor)
-// ✅ ChatGPT (React textarea)
+// ✅ ChatGPT/OpenAI (auto-send safe)
+// ✅ Discord (auto-send safe)
+// ✅ Slack (auto-send safe)
+// ✅ Microsoft Teams (auto-send safe)
+// ✅ WhatsApp Web (auto-send safe)
+// ✅ Telegram Web (auto-send safe)
 // ✅ X.com/Twitter (custom contentEditable)  
 // ✅ Notion (block-based editor)
 // ✅ Linear (React forms)
+// ✅ GitHub (comment forms)
 // ✅ And many more via universal fallback methods
 //
 // INSERTION STRATEGY:
@@ -374,8 +380,43 @@ class UniversalTextInsertion {
                 requiresFocus: true
             },
             'chat.openai.com': {
-                selectors: ['#prompt-textarea', '[data-testid="message-composer"]'],
-                method: 'react-textarea',
+                selectors: ['#prompt-textarea', '[data-testid="message-composer"]', '[contenteditable="true"]'],
+                method: 'chatgpt-safe',
+                requiresFocus: true
+            },
+            'chatgpt.com': {
+                selectors: ['#prompt-textarea', '[data-testid="message-composer"]', '[contenteditable="true"]'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'discord.com': {
+                selectors: ['[data-testid="message-editor"]', '[role="textbox"]', '[data-slate-editor="true"]'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'slack.com': {
+                selectors: ['[data-qa="message_input"]', '[contenteditable="true"]', '.ql-editor'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'teams.microsoft.com': {
+                selectors: ['[data-tid="ckeditor"]', '[contenteditable="true"]', '[role="textbox"]'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'web.whatsapp.com': {
+                selectors: ['[data-testid="conversation-compose-box-input"]', '[contenteditable="true"]'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'web.telegram.org': {
+                selectors: ['[contenteditable="true"]', '.input-message-input'],
+                method: 'messaging-safe',
+                requiresFocus: true
+            },
+            'github.com': {
+                selectors: ['[data-testid="comment-body"]', '.comment-form-textarea', '[name="comment[body]"]'],
+                method: 'messaging-safe',
                 requiresFocus: true
             },
             'notion.so': {
@@ -432,6 +473,10 @@ class UniversalTextInsertion {
                 return this.insertProseMirror(element, text);
             case 'react-textarea':
                 return this.insertReactTextarea(element, text);
+            case 'chatgpt-safe':
+                return this.insertChatGPTSafe(element, text);
+            case 'messaging-safe':
+                return this.insertMessagingSafe(element, text);
             case 'notion-blocks':
                 return this.insertNotionBlocks(element, text);
             case 'twitter-editor':
@@ -481,6 +526,125 @@ class UniversalTextInsertion {
             return this.verifyInsertion(element, text);
         } catch (error) {
             if (DEBUG) console.warn('React textarea insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertChatGPTSafe(element, text) {
+        try {
+            element.focus();
+            
+            // ChatGPT-specific: Convert line breaks to spaces to prevent auto-send
+            const safeText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+            if (DEBUG) console.log('🤖 ChatGPT: Sanitized text to prevent auto-send:', safeText.substring(0, 50) + '...');
+            
+            // Clear existing content first
+            if (element.isContentEditable) {
+                element.innerHTML = '';
+                
+                // Create text node
+                const textNode = document.createTextNode(safeText);
+                element.appendChild(textNode);
+                
+                // Position cursor at end
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                range.collapse(false);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+            } else {
+                // For textarea elements
+                element.value = safeText;
+                element.selectionStart = element.selectionEnd = safeText.length;
+            }
+            
+            // Trigger events in sequence that ChatGPT expects
+            element.dispatchEvent(new Event('focus', { bubbles: true }));
+            element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Verify without triggering more events
+            return this.verifyInsertion(element, safeText);
+        } catch (error) {
+            if (DEBUG) console.warn('ChatGPT safe insertion failed:', error);
+            return false;
+        }
+    }
+
+    insertMessagingSafe(element, text) {
+        try {
+            element.focus();
+            
+            const hostname = window.location.hostname;
+            
+            // Universal messaging platform safety: prevent auto-send on Enter
+            let safeText = text;
+            
+            // List of domains that auto-send on Enter
+            const autoSendDomains = [
+                'chatgpt.com', 'chat.openai.com',
+                'discord.com', 'slack.com', 'teams.microsoft.com',
+                'web.whatsapp.com', 'web.telegram.org'
+            ];
+            
+            if (autoSendDomains.some(domain => hostname.includes(domain))) {
+                // Convert line breaks to spaces for auto-send platforms
+                safeText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+                if (DEBUG) console.log(`💬 ${hostname}: Converted line breaks to spaces to prevent auto-send`);
+            } else {
+                // For other platforms, preserve line breaks but handle them safely
+                safeText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            }
+            
+            // Use safe insertion methods that avoid keyboard events
+            if (element.isContentEditable) {
+                // Clear and insert safely
+                element.innerHTML = '';
+                
+                if (safeText.includes('\n') && !autoSendDomains.some(domain => hostname.includes(domain))) {
+                    // Handle line breaks with <br> elements for non-auto-send platforms
+                    const lines = safeText.split('\n');
+                    const fragment = document.createDocumentFragment();
+                    
+                    lines.forEach((line, index) => {
+                        if (index > 0) {
+                            fragment.appendChild(document.createElement('br'));
+                        }
+                        if (line.trim()) {
+                            fragment.appendChild(document.createTextNode(line));
+                        }
+                    });
+                    
+                    element.appendChild(fragment);
+                } else {
+                    // Simple text node for auto-send platforms or single-line text
+                    element.appendChild(document.createTextNode(safeText));
+                }
+                
+                // Position cursor at end
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                range.collapse(false);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+            } else {
+                // For input/textarea elements
+                element.value = safeText;
+                element.selectionStart = element.selectionEnd = safeText.length;
+            }
+            
+            // Trigger safe events (no keyboard events that could trigger send)
+            element.dispatchEvent(new Event('focus', { bubbles: true }));
+            element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+            element.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            return this.verifyInsertion(element, safeText);
+        } catch (error) {
+            if (DEBUG) console.warn('Messaging safe insertion failed:', error);
             return false;
         }
     }
@@ -561,32 +725,97 @@ class UniversalTextInsertion {
         try {
             element.focus();
             
-            // Simulate typing character by character
-            for (let char of text) {
-                // Dispatch keydown, input, keyup events
-                element.dispatchEvent(new KeyboardEvent('keydown', { 
-                    key: char, bubbles: true, cancelable: true 
-                }));
+            // For messaging platforms, avoid line breaks that trigger auto-send
+            const hostname = window.location.hostname;
+            let processedText = text;
+            
+            // List of domains that auto-send on Enter
+            const autoSendDomains = [
+                'chatgpt.com', 'chat.openai.com',
+                'discord.com', 'slack.com', 'teams.microsoft.com', 
+                'web.whatsapp.com', 'web.telegram.org'
+            ];
+            
+            if (autoSendDomains.some(domain => hostname.includes(domain))) {
+                // Replace newlines with spaces to avoid triggering send
+                processedText = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+                if (DEBUG) console.log(`💬 ${hostname}: Converted line breaks to spaces to prevent auto-send`);
+            }
+            
+            // Simulate typing character by character (but avoid problematic keys)
+            for (let char of processedText) {
+                // Skip problematic characters that could trigger unwanted actions
+                if (char === '\n' || char === '\r') {
+                    // For contentEditable, insert <br> instead of newline
+                    if (element.isContentEditable) {
+                        const br = document.createElement('br');
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            range.insertNode(br);
+                            range.setStartAfter(br);
+                            range.collapse(true);
+                        } else {
+                            element.appendChild(br);
+                        }
+                    } else {
+                        // For textareas, add the newline directly to value
+                        const start = element.selectionStart || element.value.length;
+                        element.value = element.value.slice(0, start) + '\n' + element.value.slice(start);
+                        element.selectionStart = element.selectionEnd = start + 1;
+                    }
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    continue;
+                }
                 
-                // Insert character
+                // Only dispatch keyboard events for regular characters (not Enter, etc.)
+                const isRegularChar = char.match(/^[a-zA-Z0-9\s\.,;:!?'"()\-_@#$%&*+=[\]{}<>/\\|`~]$/);
+                
+                if (isRegularChar) {
+                    element.dispatchEvent(new KeyboardEvent('keydown', { 
+                        key: char, bubbles: true, cancelable: true 
+                    }));
+                }
+                
+                // Insert character (this is the safe part)
                 if (element.isContentEditable) {
-                    document.execCommand('insertText', false, char);
+                    // Use execCommand for better React compatibility
+                    if (document.execCommand) {
+                        document.execCommand('insertText', false, char);
+                    } else {
+                        // Fallback: insert text node
+                        const textNode = document.createTextNode(char);
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            range.insertNode(textNode);
+                            range.setStartAfter(textNode);
+                            range.collapse(true);
+                        } else {
+                            element.appendChild(textNode);
+                        }
+                    }
                 } else {
-                    const start = element.selectionStart || 0;
+                    // For input/textarea elements
+                    const start = element.selectionStart || element.value.length;
                     element.value = element.value.slice(0, start) + char + element.value.slice(start);
                     element.selectionStart = element.selectionEnd = start + 1;
                 }
                 
+                // Always dispatch input event for React
                 element.dispatchEvent(new Event('input', { bubbles: true }));
-                element.dispatchEvent(new KeyboardEvent('keyup', { 
-                    key: char, bubbles: true 
-                }));
                 
-                // Small delay to mimic human typing
-                await new Promise(resolve => setTimeout(resolve, 1));
+                if (isRegularChar) {
+                    element.dispatchEvent(new KeyboardEvent('keyup', { 
+                        key: char, bubbles: true 
+                    }));
+                }
+                
+                // Smaller delay for better performance
+                await new Promise(resolve => setTimeout(resolve, 0.5));
             }
             
-            return this.verifyInsertion(element, text);
+            return this.verifyInsertion(element, processedText);
         } catch (error) {
             if (DEBUG) console.warn('Typing simulation failed:', error);
             return false;
