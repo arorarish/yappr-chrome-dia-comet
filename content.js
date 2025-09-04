@@ -2,7 +2,7 @@
 // All modules combined for compatibility
 
 // Debug control - set to false for production/sharing
-const DEBUG = false;
+const DEBUG = true;
 
 // ===============================================
 // SMART TRANSCRIPTION CLEANUP SYSTEM
@@ -32,9 +32,25 @@ function cleanTranscription(text) {
         cleaned = cleaned.replace(/\b(\w+)-\s+\1\b/gi, '$1');  // "it's- it's" → "it's"
         cleaned = cleaned.replace(/\b\w+-\s+/g, ' ');          // "I- " → " "
         
-        // Phase 4: Remove filler words (with safety limit)
-        const fillers = /\b(um|uh|ah|er|hmm|umm|uhh|ehh|mm|mhm|laugh|laughs|cough|coughs|pause)\b/gi;
-        cleaned = cleaned.replace(fillers, ' ');
+        // Phase 4: Remove filler words with smart punctuation handling
+        const basicFillers = /\b(um|uh|ah|er|hmm|umm|uhh|ehh|mm|mhm|laugh|laughs|cough|coughs|pause)\b/gi;
+        
+        // Handle basic filler words with trailing punctuation (e.g., "um,", "well.")
+        cleaned = cleaned.replace(/\b(um|uh|ah|er|hmm|umm|uhh|ehh|mm|mhm|laugh|laughs|cough|coughs|pause)[.,;:]*\s*/gi, ' ');
+        
+        // Handle common filler words more carefully (preserve some context)
+        cleaned = cleaned.replace(/\b(like|well|so|anyway|basically|literally|actually)[.,;:]*\s+/gi, ' ');
+        
+        // Handle phrase fillers
+        cleaned = cleaned.replace(/\b(i mean|you know|kind of|sort of)[.,;:]*\s*/gi, ' ');
+        
+        // Handle filler words at start of sentences followed by punctuation
+        cleaned = cleaned.replace(/^\s*(um|uh|ah|er|hmm|umm|uhh|ehh|mm|mhm|laugh|laughs|cough|coughs|pause|like|well|so|anyway|basically|literally|actually)[.,;:]*\s+/gi, '');
+        
+        // Clean up orphaned punctuation from filler removal
+        cleaned = cleaned.replace(/\s+,\s+/g, ', '); // Fix " , " → ", "
+        cleaned = cleaned.replace(/,\s*,+/g, ',');   // Fix multiple commas
+        cleaned = cleaned.replace(/\.\s*\.+/g, '.');  // Fix multiple periods
         
         // Phase 5: Fix repeated words
         cleaned = cleaned.replace(/\b(\w+)\s+\1\b/gi, '$1');
@@ -46,9 +62,15 @@ function cleanTranscription(text) {
         // Phase 7: Fix punctuation spacing
         cleaned = cleaned.replace(/\s+([.,!?;:])/g, '$1'); // Remove space before punctuation
         
-        // Phase 8: Clean up messy punctuation combinations
-        cleaned = cleaned.replace(/[.,]{2,}/g, '.');  // Multiple periods/commas → single period
-        cleaned = cleaned.replace(/,\s*\./g, '.');    // ", ." → "."
+        // Phase 8: Advanced punctuation cleanup
+        cleaned = cleaned.replace(/[.,]{2,}/g, '.');     // Multiple periods/commas → single period
+        cleaned = cleaned.replace(/,\s*\./g, '.');       // ", ." → "."
+        cleaned = cleaned.replace(/;\s*[.,]/g, ';');     // "; ," or "; ." → ";"
+        cleaned = cleaned.replace(/:\s*[.,;]/g, ':');    // ": ," or ": ." → ":"
+        
+        // Fix spacing around punctuation
+        cleaned = cleaned.replace(/([.!?])\s{2,}/g, '$1 '); // Normalize spacing after sentence endings
+        cleaned = cleaned.replace(/([,;:])\s{2,}/g, '$1 '); // Normalize spacing after other punctuation
         
         // Phase 9: Fix sentence capitalization (with safety check)
         cleaned = cleaned.replace(/([.!?])\s*([a-z])/g, (match, punct, letter) => {
@@ -473,7 +495,7 @@ async function cleanupTranscription(rawText, cleanupPrompt, gptApiKey) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4o-mini-2024-07-18',
+                model: 'gpt-4o',
                 messages: [
                     {
                         role: 'user',
@@ -784,7 +806,7 @@ class PresetManager {
                 id: 'default-email',
                 name: 'Email',
                 prompt: `Reformat the user message.
-- Structure it for email communication.
+- Structure it for email communication, with every sentence or so in a new paragraph.
 - Include a greeting and a sign-off.
 - Check for correct grammar and punctuation.
 - Do not change the tone.
@@ -830,7 +852,7 @@ Original transcript: {transcript}`,
                 name: 'Basic',
                 prompt: `Clean up this transcription by following these rules:
 
-1. Remove filler words: "um", "uh", "er", "ah", "like", "you know", "so", "well", "anyway", "basically", "literally", "actually", "I mean"
+1. Remove filler words and clean surrounding punctuation: "um", "uh", "er", "ah", "like", "you know", "so", "well", "anyway", "basically", "literally", "actually", "I mean", including any trailing commas or periods
 2. Remove transcription artifacts: mentions of "[background noise]", "[static]", "[inaudible]", "[music]", "[laughter]", audio quality issues, microphone problems
 3. Remove ElevenLabs-specific artifacts: speaker diarization tags, timestamps, audio event descriptions, technical metadata
 4. Fix grammar and punctuation: add proper periods, commas, capitalization
@@ -1806,6 +1828,7 @@ class EnhancementService {
      */
     async callOpenAI(prompt, apiKey) {
         if (DEBUG) console.log('🤖 EnhancementService: Calling OpenAI API...');
+        if (DEBUG) console.log('📝 Full prompt being sent to OpenAI:', prompt);
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -1818,11 +1841,11 @@ class EnhancementService {
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
+                    model: 'gpt-4o',
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are a helpful assistant that transforms speech transcripts into well-formatted text for social media and professional communication. Follow the instructions precisely and maintain the original meaning while improving clarity and engagement.'
+                            content: 'You are a professional writing assistant specialized in transforming speech-to-text transcripts into polished, contextually appropriate communication. Your goals: 1) Preserve the original speaker\'s intent and voice completely, 2) Remove speech artifacts and improve clarity, 3) Follow formatting instructions precisely, 4) Never add information not present in the original transcript, 5) Maintain appropriate tone and formality level for the context. Focus on enhancement, not rewriting.'
                         },
                         {
                             role: 'user',
@@ -1873,6 +1896,7 @@ class EnhancementService {
             }
 
             if (DEBUG) console.log('✅ EnhancementService: OpenAI API call successful');
+            if (DEBUG) console.log('🎯 Raw response from OpenAI:', enhancedText);
             return enhancedText;
 
         } catch (error) {
@@ -2393,7 +2417,7 @@ Text to analyze: "${text.substring(0, 1000)}"`;
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini-2024-07-18',
+                    model: 'gpt-4o',
                     messages: [{ role: 'user', content: prompt }],
                     max_tokens: 800,
                     temperature: 0.1
@@ -3744,7 +3768,9 @@ class YapprContentScript {
             if (DEBUG) console.log('🔧 Preset enhancement check:', preset?.name || 'None');
             
             if (!preset) {
-                if (DEBUG) console.log('ℹ️ No preset selected, using normal insertion');
+                if (DEBUG) console.warn('⚠️ No preset selected - Enhancement will be skipped!');
+                console.warn('🎨 YAPPR: Enhancement skipped - no preset selected');
+                this.uiManager.showInfo('No enhancement preset selected');
                 this.insertTextAtActiveElement(formattedTranscription);
                 return;
             }
@@ -3756,8 +3782,9 @@ class YapprContentScript {
             // Check if API key exists before attempting enhancement
             const apiKey = await this.enhancementService.getOpenAIKey();
             if (!apiKey) {
-                // Silently skip enhancement - no warnings or errors
-                if (DEBUG) console.log('ℹ️ No OpenAI API key, skipping enhancement');
+                if (DEBUG) console.warn('⚠️ No OpenAI API key found - Enhancement will be skipped!');
+                console.warn('🔑 YAPPR: Enhancement skipped - no OpenAI API key configured');
+                this.uiManager.showWarning('Enhancement skipped - no OpenAI API key');
                 this.insertTextAtActiveElement(formattedTranscription);
                 return;
             }
@@ -3768,7 +3795,9 @@ class YapprContentScript {
             const enhancementResult = await this.enhancementService.enhanceTranscript(formattedTranscription, preset.id);
             
             if (!enhancementResult.success) {
-                if (DEBUG) console.warn('⚠️ Enhancement failed:', enhancementResult.reason);
+                if (DEBUG) console.error('❌ Enhancement failed:', enhancementResult.reason);
+                console.error('💥 YAPPR: Enhancement failed -', enhancementResult.reason);
+                this.uiManager.showError(`Enhancement failed: ${enhancementResult.reason}`);
                 this.insertTextAtActiveElement(formattedTranscription);
                 return;
             }
@@ -3886,14 +3915,22 @@ class YapprContentScript {
             if (DEBUG) console.log('🧹 Cleanup setting unavailable, using default: ENABLED');
         });
         
-        // For now, always apply cleanup by default for stability
-        // Users can disable in popup if needed
-        try {
-            if (DEBUG) console.log('🧹 Applying cleanup...');
-            processedText = cleanTranscription(text);
-        } catch (error) {
-            if (DEBUG) console.error('❌ Cleanup failed, using original text:', error);
+        // Check if text looks like it's already been enhanced (has proper email format)
+        const looksEnhanced = text.includes('\n\n') || /^Hey,\s*\n/.test(text) || /\n\s*(?:Thanks,|Cheers,)\s*$/.test(text);
+        
+        if (looksEnhanced) {
+            if (DEBUG) console.log('🎨 Text appears enhanced, skipping cleanup to preserve formatting');
             processedText = text;
+        } else {
+            // For now, always apply cleanup by default for stability
+            // Users can disable in popup if needed
+            try {
+                if (DEBUG) console.log('🧹 Applying cleanup...');
+                processedText = cleanTranscription(text);
+            } catch (error) {
+                if (DEBUG) console.error('❌ Cleanup failed, using original text:', error);
+                processedText = text;
+            }
         }
         
         // Use the cleaned text for both insertion and clipboard
@@ -4150,6 +4187,45 @@ if (typeof window.yapprContentScript === 'undefined' && !window.yapprContentScri
         window.templateEngine = new TemplateEngine();
         window.enhancementToggle = new EnhancementToggle();
         window.enhancementService = new EnhancementService();
+        
+        // Add test function for debugging email enhancement
+        window.testEmailEnhancement = async function(testText) {
+            console.log('🧪 Testing email enhancement with:', testText);
+            
+            if (!window.presetManager || !window.enhancementService) {
+                console.error('❌ Services not initialized');
+                return;
+            }
+            
+            try {
+                // Get the email preset
+                const emailPreset = window.presetManager.presets.get('default-email');
+                if (!emailPreset) {
+                    console.error('❌ Email preset not found');
+                    return;
+                }
+                
+                console.log('📝 Using preset:', emailPreset.name);
+                console.log('📋 Prompt template:', emailPreset.prompt);
+                
+                // Test the enhancement
+                const result = await window.enhancementService.enhanceTranscript(testText, 'default-email');
+                console.log('🎯 Enhancement result:', result);
+                
+                if (result.success) {
+                    console.log('✅ Enhanced text:', result.result);
+                    console.log('📊 Original vs Enhanced:');
+                    console.log('Original:', testText);
+                    console.log('Enhanced:', result.result);
+                } else {
+                    console.error('❌ Enhancement failed:', result.reason);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('💥 Test failed:', error);
+            }
+        };
         
     } else {
         if (DEBUG) console.warn('❌ Audio recording not supported in this browser');
